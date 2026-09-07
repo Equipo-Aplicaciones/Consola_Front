@@ -78,9 +78,10 @@ function Layout({ token, user }) {
         <Route
           path="/admin/*"
           element={
-            user?.role === "Admin"
-              ? <AdminDashboard token={token} />
-              : <Navigate to="/" />
+            <ProtectedByRole user={user} roles={["Admin", "N2"]}>
+              <AdminDashboard token={token} />
+            </ProtectedByRole>
+            
           }
         />
 
@@ -116,7 +117,7 @@ function Layout({ token, user }) {
         <Route
           path="/totems"
           element={
-            <ProtectedByRole user={user} roles={["Admin", "N1", "Gerente"]}>
+            <ProtectedByRole user={user} roles={["Admin", "N1", "Gerente","N2"]}>
               <Totems token={token} />
             </ProtectedByRole>
           }

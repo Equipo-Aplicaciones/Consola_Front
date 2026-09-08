@@ -21,7 +21,8 @@ function ConnectionsAdmin({ token }) {
     activo: true,
     rut: "",
     razon_social: "",
-    empresa_id: null
+    empresa_id: null,
+    formato: ""
   };
 
   const [data, setData] = useState([]);
@@ -250,6 +251,7 @@ function ConnectionsAdmin({ token }) {
         "RUT": local.rut,
         "Razón Social": local.razon_social,
         "Host": local.host,
+        "Formato": local.formato || "",
         "Activo": local.activo ? "Sí" : "No",
         "Kiosko": local.kiosko ? "Sí" : "No",
         "Cant. Kiosko": local.ck || 0,
@@ -406,6 +408,16 @@ function ConnectionsAdmin({ token }) {
               value={form.codLocal} onChange={onChange} />
           </div>
 
+          <div className="col-md-2">
+            <select className="form-select" name="formato" value={form.formato || ""} onChange={onChange}>
+              <option value="">Formato</option>
+              <option value="CALLE">Calle</option>
+              <option value="MALL">Mall</option>
+              <option value="SUPER">Super</option>
+              <option value="TERMINAL">Terminal</option>
+            </select>
+          </div>
+
           <div className="col-md-3">
             <select className="form-select" value={`${form.rut}|${form.razon_social}`} onChange={(e) => {
                 const [rut, razon_social] = e.target.value.split("|");
@@ -482,6 +494,7 @@ function ConnectionsAdmin({ token }) {
               <th>Local</th>
               <th>Cod</th>
               <th>Host</th>
+              <th>Formato</th>
               <th>Kiosko</th>
               <th>KDS</th>
               <th>Llamador</th>
@@ -496,7 +509,7 @@ function ConnectionsAdmin({ token }) {
 
           <tbody>
             {loading && (
-              <tr><td colSpan="7">Cargando...</td></tr>
+              <tr><td colSpan="8">Cargando...</td></tr>
             )}
 
             {!loading && dataFiltrada.map((row) => (
@@ -504,6 +517,7 @@ function ConnectionsAdmin({ token }) {
                 <td>{row.name}</td>
                 <td>{row.codLocal}</td>
                 <td>{row.host}</td>
+                <td>{row.formato || "-"}</td>
                 <td>{row.kiosko ? `✔ (${row.ck || 0})` : "-"}</td>
                 <td>{row.kds ? `✔ (${row.c_kds || 0})` : "-"}</td>
                 <td>{row.llamador ? `✔ (${row.c_llamador || 0})` : "-"}</td>

@@ -20,6 +20,7 @@ export default function HorariosBasePage({ token }) {
   const [horarioEspecial, setHorarioEspecial] = useState(null);
 
   const [searchLocal, setSearchLocal] = useState("");
+  const [conHorario, setConHorario] = useState("");
 
   const limit = 10;
 
@@ -72,6 +73,10 @@ export default function HorariosBasePage({ token }) {
         params.append("empresa_id", empresaSeleccionada);
       }
 
+      if (conHorario) {
+        params.append("con_horario", conHorario);
+      }
+
       const res = await fetch(`${API_BASE_URL}/horarios-base?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -96,7 +101,7 @@ export default function HorariosBasePage({ token }) {
     } catch (err) {
       console.error("❌ Error inesperado:", err);
     }
-  }, [page, searchLocal, empresaSeleccionada, token]);
+  }, [page, searchLocal, empresaSeleccionada, conHorario, token]);
 
 
   useEffect(() => {
@@ -189,6 +194,19 @@ export default function HorariosBasePage({ token }) {
             ))}
           </select>
 
+          {/* FILTRO CON/SIN HORARIO */}
+          <select className="form-select m-0"
+            value={conHorario}
+            onChange={(e) => {
+              setConHorario(e.target.value);
+              setPage(1);
+            }}
+            style={{ width: "170px" }}>
+            <option value="">Con y sin horario</option>
+            <option value="true">Con horario</option>
+            <option value="false">Sin horario</option>
+          </select>
+
           {/* BUSCADOR */}
           <input type="text" className="form-control m-0"
             placeholder="Buscar local..."
@@ -228,6 +246,8 @@ export default function HorariosBasePage({ token }) {
                 Local
               </th>
 
+              <th className="d-none d-md-table-cell">Formato Local</th>
+              <th className="d-none d-md-table-cell">Zonal</th>
               <th className="d-none d-md-table-cell">Días</th>
               <th className="d-none d-md-table-cell">Apertura - Cierre</th>
               <th>Acciones</th>
@@ -238,7 +258,7 @@ export default function HorariosBasePage({ token }) {
           <tbody>
             {horarios.length === 0 ? (
               <tr>
-                <td colSpan="4" className="text-center">
+                <td colSpan="6" className="text-center">
                   No hay horarios registrados
                 </td>
               </tr>
@@ -254,20 +274,39 @@ export default function HorariosBasePage({ token }) {
                     </strong>
 
                     <div className="d-md-none text-muted small text-left" style={{ width: "100%" }}>
-                      {local.horarios.map((h, i) => (
-                        <div key={i}>
-                          {h.dias} - {h.cerrado ? "CERRADO" : h.horario}
-                        </div>
-                      ))}
+                      {local.horarios.length === 0 ? (
+                        <div className="text-danger">Sin horario asignado</div>
+                      ) : (
+                        local.horarios.map((h, i) => (
+                          <div key={i}>
+                            {h.dias} - {h.cerrado ? "CERRADO" : h.horario}
+                          </div>
+                        ))
+                      )}
                     </div>
+                  </td>
+
+
+                  {/* FORMATO LOCAL */}
+                  <td className="d-none d-md-table-cell">
+                    {local.formato || "-"}
+                  </td>
+
+                  {/* ZONAL */}
+                  <td className="d-none d-md-table-cell">
+                    {local.zonal_nombre || "-"}
                   </td>
 
 
                   {/* DÍAS */}
                   <td className="d-none d-md-table-cell">
-                    {local.horarios.map((h, i) => (
-                      <div key={i}>{h.dias}</div>
-                    ))}
+                    {local.horarios.length === 0 ? (
+                      <span className="text-danger">Sin horario asignado</span>
+                    ) : (
+                      local.horarios.map((h, i) => (
+                        <div key={i}>{h.dias}</div>
+                      ))
+                    )}
                   </td>
 
 

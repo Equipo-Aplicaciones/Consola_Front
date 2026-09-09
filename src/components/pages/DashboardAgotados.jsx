@@ -1,9 +1,60 @@
 import React, { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../config";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  CartesianGrid,
+  LabelList
+} from "recharts";
 import * as XLSX from "xlsx";
 import { Dropdown } from "react-bootstrap";
 import DatePicker from "react-datepicker";
+import "./DashboardAgotados.css";
+
+const COLOR_OK = "#1a9850";
+const COLOR_WARN = "#f2a900";
+const COLOR_CRIT = "#d1352e";
+
+// Nombre del producto/local rotado, pegado arriba de cada barra —
+// reemplaza los ticks del eje X, que con muchas barras y nombres
+// largos se solapaban y quedaban ilegibles.
+function BarNameLabel({ x, y, width, value }) {
+  if (!value) return null;
+
+  return (
+    <text
+      x={x + width / 2}
+      y={y - 6}
+      textAnchor="start"
+      fill="#4a3627"
+      fontSize={11}
+      fontWeight={600}
+      transform={`rotate(-40 ${x + width / 2} ${y - 6})`}
+    >
+      {value}
+    </text>
+  );
+}
+
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload || !payload.length) return null;
+
+  return (
+    <div className="custom-tooltip">
+      <div className="tt-label">{label}</div>
+      <div className="tt-val">{payload[0].value} agotados</div>
+    </div>
+  );
+}
+
+function EmptyState({ mensaje }) {
+  return <div className="empty-msg">{mensaje}</div>;
+}
 
 function DashboardAgotados({ token }) {
 
@@ -24,7 +75,7 @@ function DashboardAgotados({ token }) {
   const [startDate, endDate] = rango;
 
   const [loading, setLoading] = useState(false);
-  
+
   const formatDate = (date) => {
     if (!date || !(date instanceof Date)) return null;
     return date.toLocaleDateString("sv-SE"); // ✅ sin problemas de zona horaria
@@ -39,11 +90,11 @@ function DashboardAgotados({ token }) {
 
     const desde = formatDate(startDate);
     const hasta = formatDate(endDate);
-    
+
     try {
       const qs = `?date_from=${desde}&date_to=${hasta}&limit=${limit}`;
-      const res = await fetch(`${API_BASE_URL}/reports/productosagotados${qs}`, 
-        { headers: { Authorization: `Bearer ${token}`}, 
+      const res = await fetch(`${API_BASE_URL}/reports/productosagotados${qs}`,
+        { headers: { Authorization: `Bearer ${token}`},
         });
 
        if (!res.ok) {
@@ -52,7 +103,7 @@ function DashboardAgotados({ token }) {
     }
 
     const d = await res.json();
-    
+
     setData({
       productos: d.productos || [],
       locales: d.locales || [],
@@ -78,9 +129,15 @@ function DashboardAgotados({ token }) {
   const localesUnicos = new Set(data.detalle.map(d => d.local)).size;
 
   const getColor = (valor) => {
-    if (valor >= 10) return "#dc3545"; // rojo (crítico)
-    if (valor >= 5) return "#ffc107"; // amarillo (medio)
-    return "#28a745"; // verde (bajo)
+    if (valor >= 10) return COLOR_CRIT;
+    if (valor >= 5) return COLOR_WARN;
+    return COLOR_OK;
+  };
+
+  const getColorDia = (valor) => {
+    if (valor >= 50) return COLOR_CRIT;
+    if (valor >= 20) return COLOR_WARN;
+    return COLOR_OK;
   };
 
   // 📥 Excel
@@ -108,21 +165,18 @@ function DashboardAgotados({ token }) {
     XLSX.writeFile(wb, `ProductosAgotados.xlsx`);
   };
 
-  const getColorDia = (valor) => {
-    if (valor >= 50) return "#dc3545"; // crítico
-    if (valor >= 20) return "#ffc107"; // medio
-    return "#28a745"; // bajo
-  };
-
   const isMobile = window.innerWidth < 768;
 
-  return (
-    <div className="container-fluid p-2">
+  const axisTickStyle = { fontSize: 11, fill: "#8a8a92" };
 
-      <h4 className="mb-2">Dashboard Agotados</h4>
+  return (
+    <div className="agotados-dash">
+
+      <h4 className="dash-title">Dashboard Agotados</h4>
+      <div className="dash-sub">Productos sin stock reportados por local y período</div>
 
       {/* 🔥 FILTROS */}
-      <div className="d-flex gap-2 mb-2 flex-wrap justify-content-between align-items-center">
+      <div className="toolbar-card d-flex gap-2 mb-3 flex-wrap justify-content-between align-items-center">
         <div className="w-75 datePicker" style={{ maxWidth: 250 }} title="Seleccionar Rango de fechas">
             <DatePicker
                 selectsRange={true}
@@ -139,7 +193,7 @@ function DashboardAgotados({ token }) {
         <div className="d-flex align-items-center gap-2 justify-content-end">
             {/* 🔥 Filtro limit */}
             <Dropdown>
-                <Dropdown.Toggle variant="outline-primary">
+                <Dropdown.Toggle variant="outline-secondary">
                     Top {limit}
                 </Dropdown.Toggle>
 
@@ -153,106 +207,140 @@ function DashboardAgotados({ token }) {
             </Dropdown>
 
             <button onClick={exportarExcel} className="btn btn-success">
-            <span className="d-none d-md-inline ms-1">Exportar</span>Excel
+              <i className="bi bi-file-earmark-excel me-1"></i>
+              <span className="d-none d-md-inline">Exportar</span> Excel
             </button>
         </div>
       </div>
 
       {/* 🔥 KPIs */}
-      <div className="row mb-2">
+      <div className="row mb-2 g-2">
 
-        <div className="col-md-4 mb-2">
-          <div className="card p-3 shadow-sm d-flex flex-row align-items-center gap-3">
-            <h6>Total Agotados:</h6>
-            <h3>{totalAgotados}</h3>
-          </div>
-        </div>
-
-        <div className="col-md-4 mb-2">
-          <div className="card p-3 shadow-sm d-flex flex-row align-items-center gap-3">
-            <h6>Productos Afectados:</h6>
-            <h3>{productosUnicos}</h3>
+        <div className="col-md-4">
+          <div className="kpi-card" style={{ "--accent": "#E40046" }}>
+            <div className="kpi-top">
+              <span className="kpi-label">Total Agotados</span>
+              <span className="kpi-icon">🚫</span>
+            </div>
+            <div className="kpi-value">{totalAgotados}</div>
           </div>
         </div>
 
         <div className="col-md-4">
-          <div className="card p-3 shadow-sm d-flex flex-row align-items-center gap-3">
-            <h6>Locales Afectados:</h6>
-            <h3>{localesUnicos}</h3>
+          <div className="kpi-card" style={{ "--accent": "#f2a900" }}>
+            <div className="kpi-top">
+              <span className="kpi-label">Productos Afectados</span>
+              <span className="kpi-icon">📦</span>
+            </div>
+            <div className="kpi-value">{productosUnicos}</div>
+          </div>
+        </div>
+
+        <div className="col-md-4">
+          <div className="kpi-card" style={{ "--accent": "#1565C0" }}>
+            <div className="kpi-top">
+              <span className="kpi-label">Locales Afectados</span>
+              <span className="kpi-icon">🏪</span>
+            </div>
+            <div className="kpi-value">{localesUnicos}</div>
           </div>
         </div>
 
       </div>
 
+      <div className="severidad-legend">
+        <span><span className="dot" style={{ background: COLOR_OK }}></span>Bajo</span>
+        <span><span className="dot" style={{ background: COLOR_WARN }}></span>Medio</span>
+        <span><span className="dot" style={{ background: COLOR_CRIT }}></span>Crítico</span>
+      </div>
+
       {/* 🔥 GRÁFICOS */}
-      <div className="row">
+      <div className="row g-2">
 
-        <div className="col-md-12 mb-2">
-          <div className="card p-3 shadow-sm">
-            <h6>Top Productos Agotados</h6>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data.productos}>
-                <XAxis dataKey="producto" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="cantidad">
-                    {data.productos.map((entry, index) => (
-                    <Cell key={index} fill={getColor(entry.cantidad)} />
-                    ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="col-md-12">
+          <div className="chart-card">
+            <div className="chart-title">Top Productos Agotados</div>
+            <div className="chart-sub">Cantidad de veces reportado sin stock, por producto</div>
+
+            {data.productos.length === 0 ? (
+              <EmptyState mensaje="No hay productos agotados en el período seleccionado." />
+            ) : (
+              <ResponsiveContainer width="100%" height={340}>
+                <BarChart data={data.productos} margin={{ top: 60, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid vertical={false} stroke="#ececef" />
+                  <XAxis dataKey="producto" tick={false} axisLine={{ stroke: "#ececef" }} tickLine={false} />
+                  <YAxis tick={axisTickStyle} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(228,0,70,0.05)" }} />
+                  <Bar dataKey="cantidad" radius={[6, 6, 0, 0]} maxBarSize={48}>
+                      {data.productos.map((entry, index) => (
+                      <Cell key={index} fill={getColor(entry.cantidad)} />
+                      ))}
+                      <LabelList dataKey="producto" content={BarNameLabel} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
-        <div className="col-md-6 mb-2">
-          <div className="card p-3 shadow-sm">
-            <h6>Locales con más Agotados</h6>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data.locales}>
-                <XAxis dataKey="local" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="cantidad">
-                    {data.productos.map((entry, index) => (
-                    <Cell key={index} fill={getColor(entry.cantidad)} />
-                    ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="col-md-6">
+          <div className="chart-card">
+            <div className="chart-title">Locales con más Agotados</div>
+            <div className="chart-sub">Ranking de locales por cantidad de reportes</div>
+
+            {data.locales.length === 0 ? (
+              <EmptyState mensaje="No hay locales con agotados en el período seleccionado." />
+            ) : (
+              <ResponsiveContainer width="100%" height={340}>
+                <BarChart data={data.locales} margin={{ top: 60, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid vertical={false} stroke="#ececef" />
+                  <XAxis dataKey="local" tick={false} axisLine={{ stroke: "#ececef" }} tickLine={false} />
+                  <YAxis tick={axisTickStyle} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(228,0,70,0.05)" }} />
+                  <Bar dataKey="cantidad" radius={[6, 6, 0, 0]} maxBarSize={48}>
+                      {data.locales.map((entry, index) => (
+                      <Cell key={index} fill={getColor(entry.cantidad)} />
+                      ))}
+                      <LabelList dataKey="local" content={BarNameLabel} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
-        <div className="col-md-6 mb-2">
-          <div className="card p-3 shadow-sm">
-                <strong>Agotados por día de la semana</strong>
-            
 
-            <div style={{ width: "50%", height: 300 }}>
-                <ResponsiveContainer>
-                <BarChart data={data.dias}>
-                    <XAxis dataKey="dia" />
-                    <YAxis />
-                    <Tooltip />
+        <div className="col-md-6">
+          <div className="chart-card">
+            <div className="chart-title">Agotados por Día de la Semana</div>
+            <div className="chart-sub">Distribución semanal de los reportes</div>
 
-                    <Bar dataKey="cantidad">
+            {data.dias.length === 0 ? (
+              <EmptyState mensaje="No hay datos para el período seleccionado." />
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data.dias} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid vertical={false} stroke="#ececef" />
+                  <XAxis dataKey="dia" tick={axisTickStyle} axisLine={{ stroke: "#ececef" }} tickLine={false} />
+                  <YAxis tick={axisTickStyle} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(228,0,70,0.05)" }} />
+                  <Bar dataKey="cantidad" radius={[6, 6, 0, 0]} maxBarSize={48}>
                     {data.dias?.map((entry, index) => (
                         <Cell key={index} fill={getColorDia(entry.cantidad)} />
                     ))}
-                    </Bar>
-
+                  </Bar>
                 </BarChart>
-                </ResponsiveContainer>
-            </div>
-            </div>
+              </ResponsiveContainer>
+            )}
+          </div>
         </div>
 
       </div>
 
       {/* 🔥 DETALLE */}
-      <div className="card shadow-sm mt-2">
+      <div className="detalle-card mt-2">
 
         <div className="card-header">
-          <h6 className="mb-0">Detalle</h6>
+          Detalle
         </div>
 
         <div style={{ maxHeight: 400, overflowY: "auto" }}>
@@ -269,7 +357,7 @@ function DashboardAgotados({ token }) {
             <tbody>
                 { data.detalle.length === 0 ? (
                     <tr>
-                    <td colSpan="6" className="text-center">No hay registrados</td>
+                    <td colSpan="3" className="text-center text-muted py-4">No hay registros</td>
                     </tr>
                 ) : (
                     data.detalle.map((d, i) => (
@@ -287,7 +375,7 @@ function DashboardAgotados({ token }) {
 
       </div>
 
-      {loading && <div className="mt-3">Cargando...</div>}
+      {loading && <div className="mt-3 text-muted">Cargando...</div>}
 
     </div>
   );

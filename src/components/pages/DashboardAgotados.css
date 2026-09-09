@@ -1,0 +1,186 @@
+.agotados-dash{
+  --tg-red:#E40046;
+  --tg-red-dark:#b8003a;
+  --tg-ink:#1a0a10;
+  --tg-muted:#8a8a92;
+  --tg-border:#ececef;
+  --tg-bg:#f7f6f8;
+  --tg-ok:#1a9850;
+  --tg-warn:#c98a00;
+  --tg-crit:#d1352e;
+  background:var(--tg-bg);
+  padding:16px;
+  border-radius:14px;
+}
+
+.agotados-dash .dash-title{
+  font-weight:800;
+  color:var(--tg-ink);
+  letter-spacing:-0.01em;
+  margin-bottom:2px;
+}
+
+.agotados-dash .dash-sub{
+  font-size:12px;
+  color:var(--tg-muted);
+  margin-bottom:14px;
+}
+
+/* ===== TOOLBAR ===== */
+.agotados-dash .toolbar-card{
+  background:#fff;
+  border:1px solid var(--tg-border);
+  border-radius:12px;
+  padding:10px 14px;
+  box-shadow:0 1px 3px rgba(26,10,16,.04);
+}
+
+/* ===== KPI CARDS ===== */
+.agotados-dash .kpi-card{
+  background:#fff;
+  border:1px solid var(--tg-border);
+  border-radius:12px;
+  padding:14px 16px 12px;
+  box-shadow:0 2px 8px rgba(26,10,16,.05);
+  position:relative;
+  overflow:hidden;
+  height:100%;
+  transition:box-shadow .2s, transform .2s;
+}
+
+.agotados-dash .kpi-card::before{
+  content:"";
+  position:absolute;
+  top:0; left:0; right:0;
+  height:4px;
+  background:var(--accent, var(--tg-red));
+}
+
+.agotados-dash .kpi-card:hover{
+  box-shadow:0 6px 16px rgba(26,10,16,.09);
+  transform:translateY(-1px);
+}
+
+.agotados-dash .kpi-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:8px;
+}
+
+.agotados-dash .kpi-label{
+  font-size:11px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:var(--tg-muted);
+}
+
+.agotados-dash .kpi-icon{
+  font-size:18px;
+  line-height:1;
+  opacity:.85;
+}
+
+.agotados-dash .kpi-value{
+  font-size:30px;
+  font-weight:800;
+  color:var(--tg-ink);
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ===== LEYENDA SEVERIDAD ===== */
+.agotados-dash .severidad-legend{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+  font-size:11px;
+  color:var(--tg-muted);
+  margin:2px 2px 12px;
+}
+
+.agotados-dash .severidad-legend .dot{
+  display:inline-block;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  margin-right:5px;
+}
+
+/* ===== CHART CARDS ===== */
+.agotados-dash .chart-card{
+  background:#fff;
+  border:1px solid var(--tg-border);
+  border-radius:12px;
+  padding:16px;
+  box-shadow:0 2px 8px rgba(26,10,16,.05);
+  height:100%;
+}
+
+.agotados-dash .chart-title{
+  font-size:13px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  color:var(--tg-ink);
+  margin-bottom:2px;
+}
+
+.agotados-dash .chart-sub{
+  font-size:11px;
+  color:var(--tg-muted);
+  margin-bottom:10px;
+}
+
+.agotados-dash .empty-msg{
+  padding:40px 10px;
+  text-align:center;
+  color:var(--tg-muted);
+  font-size:13px;
+}
+
+.agotados-dash .recharts-tooltip-wrapper .custom-tooltip{
+  background:#fff;
+  border:1px solid var(--tg-border);
+  border-radius:8px;
+  padding:8px 12px;
+  box-shadow:0 6px 16px rgba(26,10,16,.12);
+  font-size:12px;
+}
+
+.agotados-dash .custom-tooltip .tt-label{
+  font-weight:700;
+  color:var(--tg-ink);
+  margin-bottom:2px;
+}
+
+.agotados-dash .custom-tooltip .tt-val{
+  color:var(--tg-muted);
+}
+
+/* ===== DETALLE ===== */
+.agotados-dash .detalle-card{
+  background:#fff;
+  border:1px solid var(--tg-border);
+  border-radius:12px;
+  box-shadow:0 2px 8px rgba(26,10,16,.05);
+  overflow:hidden;
+}
+
+.agotados-dash .detalle-card .card-header{
+  background:#fff;
+  border-bottom:1px solid var(--tg-border);
+  font-weight:700;
+  font-size:13px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  color:var(--tg-ink);
+}
+
+.agotados-dash .badge-severidad{
+  font-size:10px;
+  font-weight:700;
+  padding:2px 8px;
+  border-radius:20px;
+}

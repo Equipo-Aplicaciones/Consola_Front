@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../config";
 import DatePicker from "react-datepicker";
 import "./TotemsDashboard.css";
@@ -55,6 +56,7 @@ const formatoFecha = fecha => {
 };
 
 function TotemsDashboard({ token }) {
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -526,6 +528,13 @@ function TotemsDashboard({ token }) {
               )}
             </div>
             <div className="totem-actions">
+              {/* VISTA RÁPIDA (TESTING) */}
+              <button type="button" className="btn btn-sm btn-outline-warning" title="Vista rápida para Operaciones (testing)"
+                onClick={() => navigate("/totems-quickview")} >
+                <i className="bi bi-speedometer2 me-1" />
+                Vista Rápida
+              </button>
+
               {/** FILTRO POR EMPRESA */}
               {panelAbierto !== "buscar" && (
                 <div className="totem-company-wrapper">

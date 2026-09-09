@@ -218,6 +218,14 @@ function MyNavbar({ user, onLogout, token }) {
                 Monitor Totems
               </Nav.Link>
             )}
+
+            {(role === "N1" ) && (
+              <Nav.Link onClick={() => { navigate("/gestiones");
+                  setExpanded(false);  }} >
+                Gestiones
+              </Nav.Link>
+            )}
+
           </Nav>
 
           <div className="d-flex align-items-center gap-2">

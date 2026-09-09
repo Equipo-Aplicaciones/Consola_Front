@@ -1,0 +1,37 @@
+name: CI Frontend
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Build (incluye lint de react-scripts)
+        run: npm run build
+        env:
+          # GitHub Actions setea CI=true por defecto, lo que hace que
+          # react-scripts trate cualquier warning de ESLint como error
+          # fatal. El código ya tiene warnings preexistentes (hooks,
+          # variables no usadas) que no bloqueaban el build antes de
+          # tener CI. Se desactiva aquí hasta que se limpien; el step
+          # sigue mostrando los warnings en el log.
+          CI: false
+
+      - name: Tests
+        run: npm test -- --watchAll=false --passWithNoTests
+        env:
+          CI: true

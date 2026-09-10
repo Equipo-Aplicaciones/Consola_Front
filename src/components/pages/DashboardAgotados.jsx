@@ -575,7 +575,9 @@ function DashboardAgotados({ token }) {
                       cursor={{ fill: "rgba(228,0,70,0.05)" }}
                     />
 
-                    {data.productosStack.map((nombre) => (
+                    {/* De menor a mayor: el producto que más se agotó queda pegado
+                        al gris de "Otros", no al piso. */}
+                    {[...data.productosStack].reverse().map((nombre) => (
                       <Bar
                         key={nombre}
                         dataKey={(row) => row[nombre] || 0}
@@ -639,7 +641,9 @@ function DashboardAgotados({ token }) {
                       cursor={{ fill: "rgba(228,0,70,0.05)" }}
                     />
 
-                    {data.productosStack.map((nombre) => (
+                    {/* De menor a mayor: el producto que más se agotó queda pegado
+                        al gris de "Otros", no al piso. */}
+                    {[...data.productosStack].reverse().map((nombre) => (
                       <Bar
                         key={nombre}
                         dataKey={(row) => row[nombre] || 0}

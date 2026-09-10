@@ -176,7 +176,8 @@ function App() {
   });
 
   const vistaAmplia =
-    location.pathname.includes("/totems");
+    location.pathname.includes("/totems") ||
+    location.pathname.includes("/admin");
 
   const handleLogin = (newToken, newUser) => {
     localStorage.setItem("authToken", newToken);

@@ -14,22 +14,24 @@ import GestionesPage from "../gestiones/GestionesPage";
 
 import "./AdminDashboard.css";
 
-function AdminDashboard({ token }) {
+function AdminDashboard({ token, role }) {
   const location = useLocation();
   const menuRef = useRef(null);
 
-  const [activeTab, setActiveTab] = useState(location.state?.tab || "users");
   const [openMenu, setOpenMenu] = useState(null);
 
-  const grupos = [
+  // roles: si no se declara, el tab es visible para cualquiera con acceso
+  // al Panel de Administración (Admin, N2). N2 no ve Ventas/Agotados/
+  // Reportes/Logs/Usuarios.
+  const gruposBase = [
     {
       key: "operacion",
       label: "Operación",
       icon: "bi bi-grid",
       tabs: [
         { key: "ultima-venta", label: "Distribución", icon: "bi bi-diagram-3" },
-        { key: "ventas", label: "Ventas", icon: "bi bi-graph-up-arrow" },
-        { key: "agotados", label: "Agotados", icon: "bi bi-exclamation-circle" }
+        { key: "ventas", label: "Ventas", icon: "bi bi-graph-up-arrow", roles: ["Admin"] },
+        { key: "agotados", label: "Agotados", icon: "bi bi-exclamation-circle", roles: ["Admin"] }
       ]
     },
     {
@@ -37,8 +39,8 @@ function AdminDashboard({ token }) {
       label: "Control",
       icon: "bi bi-clipboard-data",
       tabs: [
-        { key: "reports", label: "Reportes", icon: "bi bi-bar-chart" },
-        { key: "logs", label: "Logs", icon: "bi bi-journal-text" },
+        { key: "reports", label: "Reportes", icon: "bi bi-bar-chart", roles: ["Admin"] },
+        { key: "logs", label: "Logs", icon: "bi bi-journal-text", roles: ["Admin"] },
         { key: "actualizaciones", label: "Actualización POS", icon: "bi bi-arrow-repeat" }
       ]
     },
@@ -47,7 +49,7 @@ function AdminDashboard({ token }) {
       label: "Administración",
       icon: "bi bi-gear",
       tabs: [
-        { key: "users", label: "Usuarios", icon: "bi bi-people" },
+        { key: "users", label: "Usuarios", icon: "bi bi-people", roles: ["Admin"] },
         { key: "scheduled-tasks", label: "Tareas", icon: "bi bi-list-check" },
         { key: "gestiones", label: "Gestiones", icon: "bi bi-sliders" },
         { key: "connections", label: "Locales", icon: "bi bi-shop" }
@@ -55,7 +57,18 @@ function AdminDashboard({ token }) {
     }
   ];
 
+  const grupos = gruposBase
+    .map(grupo => ({
+      ...grupo,
+      tabs: grupo.tabs.filter(tab => !tab.roles || tab.roles.includes(role))
+    }))
+    .filter(grupo => grupo.tabs.length > 0);
+
   const allTabs = grupos.flatMap(grupo => grupo.tabs);
+
+  const [activeTab, setActiveTab] = useState(
+    location.state?.tab || "connections"
+  );
 
   useEffect(() => {
     if (!location.state?.tab) return;

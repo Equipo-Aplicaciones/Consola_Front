@@ -81,7 +81,7 @@ function Layout({ token, user }) {
           path="/admin/*"
           element={
             <ProtectedByRole user={user} roles={["Admin", "N2"]}>
-              <AdminDashboard token={token} />
+              <AdminDashboard token={token} role={user?.role} />
             </ProtectedByRole>
             
           }

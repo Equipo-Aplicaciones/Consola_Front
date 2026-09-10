@@ -14,6 +14,7 @@ function ConnectionManager({ token }) {
   const [vendedorEncontrado, setVendedorEncontrado] = useState(null);
   const [puestoVendedor, setPuestoVendedor] = useState("");
   const [estadoVendedor, setEstadoVendedor] = useState("");
+  const [localesVendedor, setLocalesVendedor] = useState("");
   const [consultandoVendedor, setConsultandoVendedor] = useState(false);
   const [guardandoVendedor, setGuardandoVendedor] = useState(false);
   const [mensajeVendedor, setMensajeVendedor] = useState("");
@@ -70,6 +71,7 @@ function ConnectionManager({ token }) {
     setVendedorEncontrado(null);
     setPuestoVendedor("");
     setEstadoVendedor("");
+    setLocalesVendedor("");
     setMensajeVendedor("");
   };
 
@@ -117,6 +119,7 @@ function ConnectionManager({ token }) {
     setVendedorEncontrado(null);
     setPuestoVendedor("");
     setEstadoVendedor("");
+    setLocalesVendedor("");
     try {
       const res = await fetch(
         `${API_BASE_URL}/connections/${selected}/vendedor/${encodeURIComponent(rutVendedor.trim())}`,
@@ -133,6 +136,7 @@ function ConnectionManager({ token }) {
       }
       setVendedorEncontrado(data);
       setPuestoVendedor(String(data.puesto || "").trim().toUpperCase());
+      setLocalesVendedor(String(data.locales || ""));
       const activo = Number(data.debaja) === 0 && Number(data.inhab) === 0;
       setEstadoVendedor(activo ? "ACTIVO" : "INACTIVO");
     } catch {
@@ -164,7 +168,8 @@ function ConnectionManager({ token }) {
           body: JSON.stringify({
             vendedor: vendedorEncontrado.vendedor,
             puesto: puestoVendedor,
-            estado: estadoVendedor
+            estado: estadoVendedor,
+            locales: localesVendedor
           })
         }
       );
@@ -177,6 +182,7 @@ function ConnectionManager({ token }) {
       setVendedorEncontrado(prev => ({
         ...prev,
         puesto: puestoVendedor,
+        locales: localesVendedor,
         debaja: activo ? 0 : 1,
         inhab: activo ? 0 : 1
       }));
@@ -336,27 +342,29 @@ function ConnectionManager({ token }) {
                   </div>
 
                   <div className="row g-3 align-items-end">
-                    <div className="col-md-5">
-                      <div className="d-flex align-items-end gap-2">
-                        <label className="form-label fw-bold">Puesto</label>
-                        <select className="form-select" value={puestoVendedor}
-                          onChange={e => setPuestoVendedor(e.target.value)} >
-                          <option value="">Seleccione...</option>
-                          <option value="CAJERO">CAJERO</option>
-                          <option value="GERENTE">GERENTE</option>
-                        </select>
-                      </div>
+                    <div className="col-md-3">
+                      <label className="form-label fw-bold">Puesto</label>
+                      <select className="form-select" value={puestoVendedor}
+                        onChange={e => setPuestoVendedor(e.target.value)} >
+                        <option value="">Seleccione...</option>
+                        <option value="CAJERO">CAJERO</option>
+                        <option value="GERENTE">GERENTE</option>
+                      </select>
                     </div>
-                    <div className="col-md-4">
-                      <div className="d-flex align-items-end gap-2">
-                        <label className="form-label fw-bold">Estado</label>
-                        <select className="form-select" value={estadoVendedor}
-                          onChange={e => setEstadoVendedor(e.target.value)} >
-                          <option value="">Seleccione...</option>
-                          <option value="ACTIVO">ACTIVO</option>
-                          <option value="INACTIVO">INACTIVO</option>
-                        </select>
-                      </div>
+                    <div className="col-md-3">
+                      <label className="form-label fw-bold">Estado</label>
+                      <select className="form-select" value={estadoVendedor}
+                        onChange={e => setEstadoVendedor(e.target.value)} >
+                        <option value="">Seleccione...</option>
+                        <option value="ACTIVO">ACTIVO</option>
+                        <option value="INACTIVO">INACTIVO</option>
+                      </select>
+                    </div>
+                    <div className="col-md-3">
+                      <label className="form-label fw-bold">Locales</label>
+                      <input type="text" className="form-control" value={localesVendedor}
+                        placeholder="0,codLocal"
+                        onChange={e => setLocalesVendedor(e.target.value)} />
                     </div>
                     <div className="col-md-3">
                       <button type="button" className="btn btn-success w-100" onClick={guardarVendedor}

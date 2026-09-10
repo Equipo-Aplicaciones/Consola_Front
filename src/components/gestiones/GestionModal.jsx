@@ -119,7 +119,7 @@ export default function GestionModal({
   }, [token]);
 
   /* =====================================================
-     ENCARGADOS N1
+     ENCARGADOS (N1, N2, Admin)
   ===================================================== */
 
   const cargarEncargados = useCallback(async () => {
@@ -627,7 +627,7 @@ export default function GestionModal({
                   <option value="">
                     {loadingEncargados
                       ? "Cargando usuarios..."
-                      : "Seleccione encargado N1"
+                      : "Seleccione encargado"
                     }
                   </option>
 
@@ -637,7 +637,7 @@ export default function GestionModal({
                         key={usuario.id}
                         value={usuario.id}
                       >
-                        {usuario.full_name}
+                        {usuario.full_name} ({usuario.role})
                       </option>
                     )
                   )}

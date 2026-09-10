@@ -289,94 +289,82 @@ function ConnectionsAdmin({ token }) {
 
   return (
     <div className="card shadow-sm">
-      <div className="card-header d-flex justify-content-between align-items-center">
-        <h5 className="mb-0">Administrar Locales</h5>
+      <div className="card-header d-flex align-items-center gap-2">
+        <h5 className="mb-0 text-nowrap">Administrar Locales</h5>
 
-        <div className="d-flex gap-2 justify-content-end align-items-center flex-wrap">
-          
-            <div className="col-md-3">
-              <input
-                className="form-control"
-                placeholder="Buscar local..."
-                value={filtros.texto}
-                onChange={(e) =>
-                  setFiltros(prev => ({
-                    ...prev,
-                    texto: e.target.value
-                  }))
-                }
-              />
-            </div>
+        <div className="d-flex align-items-center gap-2 ms-auto">
+          <input
+            className="form-control"
+            style={{ width: 150 }}
+            placeholder="Buscar local..."
+            value={filtros.texto}
+            onChange={(e) =>
+              setFiltros(prev => ({
+                ...prev,
+                texto: e.target.value
+              }))
+            }
+          />
 
-            <div className="col-md-2">
-              <select className="form-select" value={filtros.empresa}
-                onChange={(e) =>
-                  setFiltros(prev => ({
-                    ...prev,
-                    empresa: e.target.value
-                  }))
-                } >
-                <option value="">Empresa</option>
-                {empresas.map(emp => (
-                  <option key={emp.id} value={emp.id} >
-                    {emp.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <select className="form-select" style={{ width: 120 }} value={filtros.empresa}
+            onChange={(e) =>
+              setFiltros(prev => ({
+                ...prev,
+                empresa: e.target.value
+              }))
+            } >
+            <option value="">Empresa</option>
+            {empresas.map(emp => (
+              <option key={emp.id} value={emp.id} >
+                {emp.nombre}
+              </option>
+            ))}
+          </select>
 
-            <div className="col-md-2">
-              <select className="form-select" value={filtros.razonSocial}
-                onChange={(e) =>
-                  setFiltros(prev => ({
-                    ...prev,
-                    razonSocial: e.target.value
-                  }))
-                } >
-                <option value="">Rut</option>
+          <select className="form-select" style={{ width: 120 }} value={filtros.razonSocial}
+            onChange={(e) =>
+              setFiltros(prev => ({
+                ...prev,
+                razonSocial: e.target.value
+              }))
+            } >
+            <option value="">Rut</option>
 
-                {[...new Set(data.map(x => x.razon_social))]
-                  .filter(Boolean)
-                  .sort()
-                  .map(rs => (
-                    <option key={rs} value={rs}>
-                      {rs}
-                    </option>
-                  ))}
-              </select>
-            </div>
+            {[...new Set(data.map(x => x.razon_social))]
+              .filter(Boolean)
+              .sort()
+              .map(rs => (
+                <option key={rs} value={rs}>
+                  {rs}
+                </option>
+              ))}
+          </select>
 
-            <div className="col-md-2">
-              <select className="form-select" value={filtros.kiosko}
-                onChange={(e) =>
-                  setFiltros(prev => ({
-                    ...prev,
-                    kiosko: e.target.value
-                  }))
-                } >
-                <option value="">Kiosko</option>
-                <option value="true">Sí</option>
-                <option value="false">No</option>
-              </select>
-            </div>
+          <select className="form-select" style={{ width: 100 }} value={filtros.kiosko}
+            onChange={(e) =>
+              setFiltros(prev => ({
+                ...prev,
+                kiosko: e.target.value
+              }))
+            } >
+            <option value="">Kiosko</option>
+            <option value="true">Sí</option>
+            <option value="false">No</option>
+          </select>
 
-            <div className="col-md-2">
-              <select className="form-select" value={filtros.kds}
-                onChange={(e) =>
-                  setFiltros(prev => ({
-                    ...prev,
-                    kds: e.target.value
-                  }))
-                } >
-                <option value="">KDS</option>
-                <option value="true">Sí</option>
-                <option value="false">No</option>
-              </select>
-            </div>
+          <select className="form-select" style={{ width: 100 }} value={filtros.kds}
+            onChange={(e) =>
+              setFiltros(prev => ({
+                ...prev,
+                kds: e.target.value
+              }))
+            } >
+            <option value="">KDS</option>
+            <option value="true">Sí</option>
+            <option value="false">No</option>
+          </select>
 
-          </div>
-
-          <button className="btn btn-outline-secondary mx-1" onClick={() =>
+          <button className="btn btn-outline-secondary" onClick={() =>
               setFiltros({
                 texto: "",
                 empresa: "",
@@ -387,18 +375,19 @@ function ConnectionsAdmin({ token }) {
                 activo: ""
               })
             } > <i className="bi bi-arrow-clockwise"></i> </button>
-  
+
+        </div>
       </div>
 
       <div className="card-body border-bottom">
         <div className="row g-2">
 
-          <div className="col-md-3">
+          <div className="col-md-2">
             <input className="form-control" name="name" placeholder="Nombre"
               value={form.name} onChange={onChange} />
           </div>
 
-          <div className="col-md-3">
+          <div className="col-md-2">
             <input className="form-control" name="host" placeholder="Host"
               value={form.host} onChange={onChange} />
           </div>
@@ -418,7 +407,7 @@ function ConnectionsAdmin({ token }) {
             </select>
           </div>
 
-          <div className="col-md-3">
+          <div className="col-md-2">
             <select className="form-select" value={`${form.rut}|${form.razon_social}`} onChange={(e) => {
                 const [rut, razon_social] = e.target.value.split("|");
                 setForm(prev => ({
@@ -438,47 +427,62 @@ function ConnectionsAdmin({ token }) {
               ))}
             </select>
           </div>
-          
-          <div className="col-md-6 d-flex gap-3 align-items-center">
-            <label><input type="checkbox" name="kiosko" checked={form.kiosko} onChange={onChange} />Kiosko</label>
-            <input className="form-control" name="ck" placeholder="Cant. Kiosko"
-            title="Cantidad de kioskos" value={form.ck} onChange={onChange}  disabled={!form.kiosko} />
-            
-            <label><input type="checkbox" name="kds" checked={form.kds} onChange={onChange} /> KDS</label>
-            <input className="form-control" name="c_kds" placeholder="Cant. KDS" title="Cantidad de KDS"
-              value={form.c_kds} onChange={onChange} disabled={!form.kds} />
 
-            <label><input type="checkbox" name="llamador"
-              checked={form.llamador} onChange={onChange} /> Llamador</label>
-            <input className="form-control" name="c_llamador" title="IP del Llamador, solo ultimo octeto" placeholder="IP."
-              value={form.c_llamador} onChange={onChange} disabled={!form.llamador} />
-            
+          <div className="col-12">
+            <div className="row g-2">
+              <div className="col-sm-3">
+                <Select placeholder="Empresa" isClearable
+                  value={ empresas .map(emp => ({ value: emp.id, label: emp.nombre }))
+                          .find(opt => opt.value === form.empresa_id) || null }
+                  options={empresas.map(emp => ({ value: emp.id, label: emp.nombre }))}
+                  menuPortalTarget={document.body}
+                  menuPosition="fixed"
+                  styles={{
+                      menuPortal: base => ({
+                          ...base,
+                          zIndex: 9999
+                      })
+                  }}
+                  onChange={(opt) => {
+                      setForm(prev => ({
+                          ...prev,
+                          empresa_id: opt ? opt.value : null
+                      }));
+                  }} />
+              </div>
+
+              <div className="col-sm-3 d-flex align-items-center gap-2">
+                <label className="d-flex align-items-center gap-1 text-nowrap mb-0">
+                  <input type="checkbox" name="kiosko" checked={form.kiosko} onChange={onChange} /> Kiosko
+                </label>
+                <input className="form-control" name="ck" placeholder="Cant. Kiosko"
+                  title="Cantidad de kioskos" value={form.ck} onChange={onChange} disabled={!form.kiosko} />
+              </div>
+
+              <div className="col-sm-3 d-flex align-items-center gap-2">
+                <label className="d-flex align-items-center gap-1 text-nowrap mb-0">
+                  <input type="checkbox" name="kds" checked={form.kds} onChange={onChange} /> KDS
+                </label>
+                <input className="form-control" name="c_kds" placeholder="Cant. KDS" title="Cantidad de KDS"
+                  value={form.c_kds} onChange={onChange} disabled={!form.kds} />
+              </div>
+
+              <div className="col-sm-3 d-flex align-items-center gap-2">
+                <label className="d-flex align-items-center gap-1 text-nowrap mb-0">
+                  <input type="checkbox" name="llamador" checked={form.llamador} onChange={onChange} /> Llamador
+                </label>
+                <input className="form-control" name="c_llamador" title="IP del Llamador, solo ultimo octeto" placeholder="IP."
+                  value={form.c_llamador} onChange={onChange} disabled={!form.llamador} />
+              </div>
+            </div>
           </div>
 
-          <div className="col-md-6 d-flex gap-2 justify-content-end m-auto">
-            <Select className="flex-grow-1" placeholder="Empresa" isClearable
-              value={ empresas .map(emp => ({ value: emp.id, label: emp.nombre }))
-                      .find(opt => opt.value === form.empresa_id) || null }
-              options={empresas.map(emp => ({ value: emp.id, label: emp.nombre }))}
-              menuPortalTarget={document.body}
-              menuPosition="fixed"
-              styles={{
-                  menuPortal: base => ({
-                      ...base,
-                      zIndex: 9999
-                  })
-              }}
-              onChange={(opt) => {
-                  setForm(prev => ({
-                      ...prev,
-                      empresa_id: opt ? opt.value : null
-                  }));
-              }} />
-            <button className="btn btn-success w-25" onClick={guardar}>
+          <div className="col-12 d-flex gap-2 justify-content-end">
+            <button className="btn btn-success" style={{ minWidth: 120 }} onClick={guardar}>
               {form.id ? "Actualizar" : "Crear"}
             </button>
 
-            <button className="btn btn-secondary w-25"
+            <button className="btn btn-secondary" style={{ minWidth: 120 }}
               onClick={() => setForm(emptyForm)}>
               Limpiar
             </button>

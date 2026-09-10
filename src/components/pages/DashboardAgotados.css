@@ -1,20 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..800&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap');
+
 .agotados-dash{
   --tg-red:#E40046;
   --tg-red-dark:#b8003a;
   --tg-ink:#1a0a10;
-  --tg-muted:#8a8a92;
-  --tg-border:#ececef;
-  --tg-bg:#f7f6f8;
-  --tg-ok:#1a9850;
-  --tg-warn:#c98a00;
-  --tg-crit:#d1352e;
+  --tg-muted:#8a8073;
+  --tg-border:#e8ddd8;
+  --tg-bg:#f0ede8;
+  --tg-card:#fbf6ec;
+  --tg-ok:#2e9e60;
+  --tg-warn:#f2a900;
+  --tg-crit:#E40046;
+  --font-display:'Fraunces', serif;
+  --font-condensed:'Barlow Condensed', sans-serif;
+  --font-body:'Barlow', sans-serif;
+  --shadow-sm:0 1px 2px rgba(26,10,16,.06);
+  --shadow-md:0 4px 6px -1px rgba(26,10,16,.10), 0 2px 4px -2px rgba(26,10,16,.05);
+  --shadow-lg:0 10px 18px -4px rgba(26,10,16,.14), 0 4px 6px -4px rgba(26,10,16,.06);
+
   background:var(--tg-bg);
-  padding:16px;
+  padding:18px;
   border-radius:14px;
+  font-family:var(--font-body);
+  color:var(--tg-ink);
+}
+
+/* ===== TOOLBAR ===== */
+.agotados-dash .toolbar-card{
+  background:var(--tg-card);
+  border:1px solid var(--tg-border);
+  border-radius:12px;
+  padding:10px 14px;
+  box-shadow:var(--shadow-sm);
 }
 
 .agotados-dash .dash-title{
-  font-weight:800;
+  font-family:var(--font-display);
+  font-weight:700;
   color:var(--tg-ink);
   letter-spacing:-0.01em;
   margin-bottom:2px;
@@ -26,22 +48,13 @@
   margin-bottom:14px;
 }
 
-/* ===== TOOLBAR ===== */
-.agotados-dash .toolbar-card{
-  background:#fff;
-  border:1px solid var(--tg-border);
-  border-radius:12px;
-  padding:10px 14px;
-  box-shadow:0 1px 3px rgba(26,10,16,.04);
-}
-
 /* ===== KPI CARDS ===== */
 .agotados-dash .kpi-card{
-  background:#fff;
+  background:var(--tg-card);
   border:1px solid var(--tg-border);
   border-radius:12px;
   padding:14px 16px 12px;
-  box-shadow:0 2px 8px rgba(26,10,16,.05);
+  box-shadow:var(--shadow-md);
   position:relative;
   overflow:hidden;
   height:100%;
@@ -57,7 +70,7 @@
 }
 
 .agotados-dash .kpi-card:hover{
-  box-shadow:0 6px 16px rgba(26,10,16,.09);
+  box-shadow:var(--shadow-lg);
   transform:translateY(-1px);
 }
 
@@ -69,10 +82,11 @@
 }
 
 .agotados-dash .kpi-label{
+  font-family:var(--font-condensed);
   font-size:11px;
   font-weight:700;
   text-transform:uppercase;
-  letter-spacing:.06em;
+  letter-spacing:.08em;
   color:var(--tg-muted);
 }
 
@@ -83,8 +97,9 @@
 }
 
 .agotados-dash .kpi-value{
-  font-size:30px;
-  font-weight:800;
+  font-family:var(--font-display);
+  font-size:32px;
+  font-weight:700;
   color:var(--tg-ink);
   line-height:1;
   font-variant-numeric:tabular-nums;
@@ -93,9 +108,14 @@
 /* ===== LEYENDA SEVERIDAD ===== */
 .agotados-dash .severidad-legend{
   display:flex;
-  gap:14px;
+  align-items:center;
+  gap:8px;
   flex-wrap:wrap;
-  font-size:11px;
+  font-family:var(--font-condensed);
+  font-size:12px;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.03em;
   color:var(--tg-muted);
   margin:2px 2px 12px;
 }
@@ -108,21 +128,29 @@
   margin-right:5px;
 }
 
+.agotados-dash .severidad-legend .severidad-gradiente{
+  width:120px;
+  height:8px;
+  border-radius:4px;
+  box-shadow:inset 0 0 0 1px rgba(26,10,16,.08);
+}
+
 /* ===== CHART CARDS ===== */
 .agotados-dash .chart-card{
   background:#fff;
   border:1px solid var(--tg-border);
   border-radius:12px;
   padding:16px;
-  box-shadow:0 2px 8px rgba(26,10,16,.05);
+  box-shadow:var(--shadow-sm);
   height:100%;
 }
 
 .agotados-dash .chart-title{
-  font-size:13px;
+  font-family:var(--font-condensed);
+  font-size:14px;
   font-weight:700;
   text-transform:uppercase;
-  letter-spacing:.04em;
+  letter-spacing:.05em;
   color:var(--tg-ink);
   margin-bottom:2px;
 }
@@ -145,11 +173,18 @@
   border:1px solid var(--tg-border);
   border-radius:8px;
   padding:8px 12px;
-  box-shadow:0 6px 16px rgba(26,10,16,.12);
+  box-shadow:var(--shadow-lg);
   font-size:12px;
 }
 
+.agotados-dash .recharts-tooltip-wrapper .custom-tooltip.tt-scroll{
+  max-height:260px;
+  overflow-y:auto;
+  min-width:220px;
+}
+
 .agotados-dash .custom-tooltip .tt-label{
+  font-family:var(--font-condensed);
   font-weight:700;
   color:var(--tg-ink);
   margin-bottom:2px;
@@ -159,23 +194,131 @@
   color:var(--tg-muted);
 }
 
+.agotados-dash .custom-tooltip .tt-stack-row{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:2px 0;
+  font-size:11.5px;
+}
+
+.agotados-dash .custom-tooltip .tt-stack-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  flex-shrink:0;
+}
+
+.agotados-dash .custom-tooltip .tt-stack-nombre{
+  color:var(--tg-ink);
+  flex:1;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:170px;
+}
+
+.agotados-dash .custom-tooltip .tt-stack-valor{
+  color:var(--tg-muted);
+  font-variant-numeric:tabular-nums;
+}
+
+.agotados-dash .custom-tooltip .tt-otros-header{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-top:6px;
+  padding-top:6px;
+  border-top:1px dashed var(--tg-border);
+  font-family:var(--font-condensed);
+  font-weight:700;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.03em;
+  color:var(--tg-muted);
+}
+
+.agotados-dash .custom-tooltip .tt-stack-row-otros .tt-stack-nombre{
+  padding-left:14px;
+  color:var(--tg-muted);
+}
+
+.agotados-dash .custom-tooltip .tt-hint{
+  margin-top:8px;
+  padding-top:6px;
+  border-top:1px solid var(--tg-border);
+  font-size:10.5px;
+  font-style:italic;
+  color:var(--tg-muted);
+  text-align:center;
+}
+
+.agotados-dash .stack-legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px 14px;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid var(--tg-border);
+}
+
+.agotados-dash .stack-legend-item{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  font-size:11px;
+  color:var(--tg-muted);
+  white-space:nowrap;
+}
+
+.agotados-dash .stack-legend-dot{
+  width:9px;
+  height:9px;
+  border-radius:50%;
+  flex-shrink:0;
+}
+
+/* Sin el prefijo .agotados-dash: React-Bootstrap monta el <Modal> en un
+   portal fuera de este contenedor, así que el punto de color del detalle
+   necesita su propia regla para pintarse ahí también. */
+.stack-legend-dot{
+  width:9px;
+  height:9px;
+  border-radius:50%;
+  flex-shrink:0;
+}
+
+.tt-mix-row{
+  background:var(--tg-bg, #f0ede8);
+  font-size:0.92em;
+}
+
 /* ===== DETALLE ===== */
 .agotados-dash .detalle-card{
   background:#fff;
   border:1px solid var(--tg-border);
   border-radius:12px;
-  box-shadow:0 2px 8px rgba(26,10,16,.05);
+  box-shadow:var(--shadow-sm);
   overflow:hidden;
 }
 
 .agotados-dash .detalle-card .card-header{
-  background:#fff;
+  background:var(--tg-card);
   border-bottom:1px solid var(--tg-border);
+  font-family:var(--font-condensed);
   font-weight:700;
-  font-size:13px;
+  font-size:14px;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  color:var(--tg-ink);
+}
+
+.agotados-dash .detalle-card thead{
+  font-family:var(--font-condensed);
+  font-size:12px;
   text-transform:uppercase;
   letter-spacing:.04em;
-  color:var(--tg-ink);
+  color:var(--tg-muted);
 }
 
 .agotados-dash .badge-severidad{
@@ -183,4 +326,22 @@
   font-weight:700;
   padding:2px 8px;
   border-radius:20px;
+}
+
+/* ===== NAVEGADOR DE SEMANA ===== */
+.agotados-dash .toolbar-card .fw-semibold{
+  font-family:var(--font-condensed);
+  font-size:15px;
+  letter-spacing:.01em;
+}
+
+.agotados-dash .btn-outline-secondary{
+  border-color:var(--tg-border);
+  color:var(--tg-ink);
+}
+
+.agotados-dash .btn-outline-secondary:hover{
+  background:var(--tg-red);
+  border-color:var(--tg-red);
+  color:#fff;
 }

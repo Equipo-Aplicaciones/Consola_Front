@@ -37,9 +37,14 @@ function interpolarColor(hexA, hexB, t) {
   return rgbToHex(a.map((v, i) => v + (b[i] - v) * t));
 }
 // Mapea un valor a un punto de la rampa según su magnitud relativa al resto
-// del conjunto (0 = el más chico, 1 = el más grande).
+// del conjunto (0 = el más chico, 1 = el más grande). Se usa raíz cuadrada en
+// vez de una escala lineal: con una cola larga (pocos productos grandes,
+// muchos chicos parejos) lo lineal aplasta casi todas las barras contra el
+// extremo claro de la rampa y se ven todas iguales — la raíz cuadrada les da
+// más rango de color a los valores chicos sin perder el orden ni saturar
+// antes de tiempo a los grandes.
 function colorPorMagnitud(valor, min, max) {
-  const t = max > min ? (valor - min) / (max - min) : 1;
+  const t = max > min ? Math.sqrt((valor - min) / (max - min)) : 1;
   const pos = t * (SEQ_ROJO.length - 1);
   const i0 = Math.floor(pos);
   const i1 = Math.min(i0 + 1, SEQ_ROJO.length - 1);
@@ -352,9 +357,13 @@ function DashboardAgotados({ token }) {
   const productosUnicos = new Set(data.detalle.map(d => d.producto)).size;
   const localesUnicos = new Set(data.detalle.map(d => d.local)).size;
 
-  const cantidadesProductos = data.productos.map((p) => p.cantidad);
-  const minCantidadProducto = cantidadesProductos.length ? Math.min(...cantidadesProductos) : 0;
-  const maxCantidadProducto = cantidadesProductos.length ? Math.max(...cantidadesProductos) : 0;
+  const minMax = (cantidades) => ({
+    min: cantidades.length ? Math.min(...cantidades) : 0,
+    max: cantidades.length ? Math.max(...cantidades) : 0
+  });
+  const { min: minCantidadProducto, max: maxCantidadProducto } = minMax(data.productos.map((p) => p.cantidad));
+  const { min: minCantidadLocal, max: maxCantidadLocal } = minMax(data.locales.map((l) => l.cantidad));
+  const { min: minCantidadDia, max: maxCantidadDia } = minMax(data.dias.map((d) => d.cantidad));
 
   // 📥 Excel
   const exportarExcel = () => {
@@ -559,65 +568,34 @@ function DashboardAgotados({ token }) {
         <div className="col-md-6">
           <div className="chart-card">
             <div className="chart-title">Locales con más Agotados</div>
-            <div className="chart-sub">Ranking de locales por cantidad de reportes</div>
+            <div className="chart-sub">Ranking de locales por cantidad de reportes — más oscuro, más se agotó</div>
 
             {data.locales.length === 0 ? (
               <EmptyState mensaje="No hay locales con agotados en el período seleccionado." />
             ) : (
-              <>
-                <ResponsiveContainer width="100%" height={340}>
-                  <BarChart data={data.locales} margin={{ top: 60, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid vertical={false} stroke="#ececef" />
-                    <XAxis dataKey="local" tick={false} axisLine={{ stroke: "#ececef" }} tickLine={false} />
-                    <YAxis tick={axisTickStyle} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <Tooltip
-                      content={<ProductStackTooltip productosStack={data.productosStack} />}
-                      cursor={{ fill: "rgba(228,0,70,0.05)" }}
-                    />
-
-                    {/* De menor a mayor: el producto que más se agotó queda pegado
-                        al gris de "Otros", no al piso. */}
-                    {[...data.productosStack].reverse().map((nombre) => (
-                      <Bar
-                        key={nombre}
-                        dataKey={(row) => row[nombre] || 0}
-                        name={nombre}
-                        stackId="local"
-                        fill={colorDeProducto(nombre, data.productosStack)}
-                        maxBarSize={48}
-                        cursor="pointer"
-                        onClick={(barData) => setGrupoDetalle(barData.payload)}
-                      />
+              <ResponsiveContainer width="100%" height={340}>
+                <BarChart data={data.locales} margin={{ top: 60, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid vertical={false} stroke="#ececef" />
+                  <XAxis dataKey="local" tick={false} axisLine={{ stroke: "#ececef" }} tickLine={false} />
+                  <YAxis tick={axisTickStyle} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip
+                    content={<ProductStackTooltip productosStack={data.productosStack} />}
+                    cursor={{ fill: "rgba(228,0,70,0.05)" }}
+                  />
+                  <Bar
+                    dataKey="cantidad"
+                    radius={[6, 6, 0, 0]}
+                    maxBarSize={48}
+                    cursor="pointer"
+                    onClick={(barData) => setGrupoDetalle(barData.payload)}
+                  >
+                    {data.locales.map((entry, index) => (
+                      <Cell key={index} fill={colorPorMagnitud(entry.cantidad, minCantidadLocal, maxCantidadLocal)} />
                     ))}
-
-                    <Bar
-                      dataKey={(row) => row.Otros || 0}
-                      name="Otros"
-                      stackId="local"
-                      fill={STACK_OTROS_COLOR}
-                      radius={[6, 6, 0, 0]}
-                      maxBarSize={48}
-                      cursor="pointer"
-                      onClick={(barData) => setGrupoDetalle(barData.payload)}
-                    >
-                      <LabelList dataKey="local" content={BarNameLabel} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-
-                <div className="stack-legend">
-                  {data.productosStack.map((nombre) => (
-                    <span className="stack-legend-item" key={nombre}>
-                      <span className="stack-legend-dot" style={{ background: colorDeProducto(nombre, data.productosStack) }} />
-                      {nombre}
-                    </span>
-                  ))}
-                  <span className="stack-legend-item">
-                    <span className="stack-legend-dot" style={{ background: STACK_OTROS_COLOR }} />
-                    Otros
-                  </span>
-                </div>
-              </>
+                    <LabelList dataKey="local" content={BarNameLabel} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             )}
           </div>
         </div>
@@ -625,7 +603,7 @@ function DashboardAgotados({ token }) {
         <div className="col-md-6">
           <div className="chart-card">
             <div className="chart-title">Agotados por Día de la Semana</div>
-            <div className="chart-sub">Cada color es un producto — la mezcla (mix) de agotados de ese día</div>
+            <div className="chart-sub">Total de agotados por día — más oscuro, más se agotó</div>
 
             {data.dias.length === 0 ? (
               <EmptyState mensaje="No hay datos para el período seleccionado." />
@@ -640,32 +618,16 @@ function DashboardAgotados({ token }) {
                       content={<ProductStackTooltip productosStack={data.productosStack} />}
                       cursor={{ fill: "rgba(228,0,70,0.05)" }}
                     />
-
-                    {/* De menor a mayor: el producto que más se agotó queda pegado
-                        al gris de "Otros", no al piso. */}
-                    {[...data.productosStack].reverse().map((nombre) => (
-                      <Bar
-                        key={nombre}
-                        dataKey={(row) => row[nombre] || 0}
-                        name={nombre}
-                        stackId="dia"
-                        fill={colorDeProducto(nombre, data.productosStack)}
-                        maxBarSize={48}
-                        cursor="pointer"
-                        onClick={(barData) => setGrupoDetalle(barData.payload)}
-                      />
-                    ))}
-
                     <Bar
-                      dataKey={(row) => row.Otros || 0}
-                      name="Otros"
-                      stackId="dia"
-                      fill={STACK_OTROS_COLOR}
+                      dataKey="cantidad"
                       radius={[6, 6, 0, 0]}
                       maxBarSize={48}
                       cursor="pointer"
                       onClick={(barData) => setGrupoDetalle(barData.payload)}
                     >
+                      {data.dias.map((entry, index) => (
+                        <Cell key={index} fill={colorPorMagnitud(entry.cantidad, minCantidadDia, maxCantidadDia)} />
+                      ))}
                       <LabelList
                         dataKey="cantidad"
                         position="top"
@@ -674,19 +636,6 @@ function DashboardAgotados({ token }) {
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
-
-                <div className="stack-legend">
-                  {data.productosStack.map((nombre) => (
-                    <span className="stack-legend-item" key={nombre}>
-                      <span className="stack-legend-dot" style={{ background: colorDeProducto(nombre, data.productosStack) }} />
-                      {nombre}
-                    </span>
-                  ))}
-                  <span className="stack-legend-item">
-                    <span className="stack-legend-dot" style={{ background: STACK_OTROS_COLOR }} />
-                    Otros
-                  </span>
-                </div>
               </>
             )}
           </div>

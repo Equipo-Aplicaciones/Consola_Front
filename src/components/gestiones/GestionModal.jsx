@@ -510,9 +510,12 @@ export default function GestionModal({
 
           <Row className="g-3">
 
-            <Col md={6}>
-              <div className="d-flex justify-content-start gap-3">
-                <Form.Label>
+            <Col md={8}>
+              <div className="d-flex align-items-center gap-3">
+                <Form.Label
+                  className="mb-0 text-nowrap"
+                  style={{ minWidth: 95 }}
+                >
                   Nombre
                 </Form.Label>
 
@@ -531,9 +534,12 @@ export default function GestionModal({
               </div>
             </Col>
 
-            <Col md={6}>
-              <div className="d-flex justify-content-start gap-3">
-                <Form.Label>
+            <Col md={4}>
+              <div className="d-flex align-items-center gap-2">
+                <Form.Label
+                  className="mb-0 text-nowrap"
+                  style={{ minWidth: 55 }}
+                >
                   Versión
                 </Form.Label>
 
@@ -552,8 +558,11 @@ export default function GestionModal({
             </Col>
 
             <Col md={8}>
-              <div className="d-flex justify-content-start gap-3">
-                <Form.Label>
+              <div className="d-flex align-items-start gap-3">
+                <Form.Label
+                  className="mb-0 text-nowrap pt-2"
+                  style={{ minWidth: 95 }}
+                >
                   Descripción
                 </Form.Label>
 
@@ -575,8 +584,11 @@ export default function GestionModal({
             </Col>
 
             <Col md={4}>
-              <div className="d-flex justify-content-start gap-3">
-                <Form.Label>
+              <div className="d-flex align-items-center gap-2">
+                <Form.Label
+                  className="mb-0 text-nowrap"
+                  style={{ minWidth: 55 }}
+                >
                   Inicio
                 </Form.Label>
 
@@ -604,7 +616,10 @@ export default function GestionModal({
             <Col md={8}>
               <div className="d-flex align-items-center gap-3">
 
-                <Form.Label className="mb-0 text-nowrap">
+                <Form.Label
+                  className="mb-0 text-nowrap"
+                  style={{ minWidth: 95 }}
+                >
                   Encargado
                 </Form.Label>
 

@@ -14,7 +14,6 @@ export default function GestionesPage({ token }) {
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [gestionSeleccionada, setGestionSeleccionada] = useState(null);
-  const [ocultarFinalizadas, setOcultarFinalizadas] = useState(true);
 
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
   const role = user.role;
@@ -246,12 +245,15 @@ export default function GestionesPage({ token }) {
     [gestiones]
   );
 
+  // Las finalizadas solo se muestran si el filtro de estado las pidió
+  // explícitamente; con "Todos los estados" u otro estado puntual, quedan
+  // afuera para no ensuciar el listado.
   const gestionesVisibles = useMemo(
     () =>
-      ocultarFinalizadas
-        ? gestiones.filter(x => x.estado_codigo !== "FINALIZADA")
-        : gestiones,
-    [gestiones, ocultarFinalizadas]
+      estado === "FINALIZADA"
+        ? gestiones
+        : gestiones.filter(x => x.estado_codigo !== "FINALIZADA"),
+    [gestiones, estado]
   );
 
   /* =====================================================
@@ -490,26 +492,6 @@ export default function GestionesPage({ token }) {
               </select>
             </div>
 
-            <div className="col-12 d-flex align-items-center">
-              <div className="form-check">
-                <input
-                  type="checkbox"
-                  className="form-check-input"
-                  id="ocultarFinalizadas"
-                  checked={ocultarFinalizadas}
-                  onChange={e =>
-                    setOcultarFinalizadas(e.target.checked)
-                  }
-                />
-                <label
-                  className="form-check-label small"
-                  htmlFor="ocultarFinalizadas"
-                >
-                  Ocultar finalizadas
-                </label>
-              </div>
-            </div>
-
           </div>
 
           {/* =========================
@@ -551,9 +533,9 @@ export default function GestionesPage({ token }) {
               Todas las gestiones de este filtro están finalizadas.{" "}
               <button
                 className="btn btn-link p-0 align-baseline"
-                onClick={() => setOcultarFinalizadas(false)}
+                onClick={() => setEstado("FINALIZADA")}
               >
-                Mostrarlas
+                Ver finalizadas
               </button>
             </div>
 

@@ -245,6 +245,17 @@ export default function GestionesPage({ token }) {
     [gestiones]
   );
 
+  // Las finalizadas solo se muestran si el filtro de estado las pidió
+  // explícitamente; con "Todos los estados" u otro estado puntual, quedan
+  // afuera para no ensuciar el listado.
+  const gestionesVisibles = useMemo(
+    () =>
+      estado === "FINALIZADA"
+        ? gestiones
+        : gestiones.filter(x => x.estado_codigo !== "FINALIZADA"),
+    [gestiones, estado]
+  );
+
   /* =====================================================
      HELPERS
   ===================================================== */
@@ -516,6 +527,18 @@ export default function GestionesPage({ token }) {
               }
             </div>
 
+          ) : gestionesVisibles.length === 0 ? (
+
+            <div className="text-center text-muted py-5">
+              Todas las gestiones de este filtro están finalizadas.{" "}
+              <button
+                className="btn btn-link p-0 align-baseline"
+                onClick={() => setEstado("FINALIZADA")}
+              >
+                Ver finalizadas
+              </button>
+            </div>
+
           ) : (
 
             <div className="table-responsive">
@@ -528,7 +551,6 @@ export default function GestionesPage({ token }) {
                     <th>Gestión</th>
                     <th>Versión</th>
                     <th>Estado</th>
-                    <th>Locales</th>
                     <th>Avance</th>
                     <th />
                   </tr>
@@ -536,7 +558,7 @@ export default function GestionesPage({ token }) {
 
                 <tbody>
 
-                  {gestiones.map(gestion => {
+                  {gestionesVisibles.map(gestion => {
                     const resumen =
                       gestion.resumen || {};
 
@@ -596,10 +618,6 @@ export default function GestionesPage({ token }) {
                           >
                             {gestion.estado_nombre}
                           </span>
-                        </td>
-
-                        <td>
-                          {totalLocales}
                         </td>
 
                         <td

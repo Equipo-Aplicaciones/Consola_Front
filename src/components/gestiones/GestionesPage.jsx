@@ -14,6 +14,7 @@ export default function GestionesPage({ token }) {
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [gestionSeleccionada, setGestionSeleccionada] = useState(null);
+  const [ocultarFinalizadas, setOcultarFinalizadas] = useState(true);
 
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
   const role = user.role;
@@ -243,6 +244,14 @@ export default function GestionesPage({ token }) {
           "SUSPENDIDA"
       ).length,
     [gestiones]
+  );
+
+  const gestionesVisibles = useMemo(
+    () =>
+      ocultarFinalizadas
+        ? gestiones.filter(x => x.estado_codigo !== "FINALIZADA")
+        : gestiones,
+    [gestiones, ocultarFinalizadas]
   );
 
   /* =====================================================
@@ -481,6 +490,26 @@ export default function GestionesPage({ token }) {
               </select>
             </div>
 
+            <div className="col-12 d-flex align-items-center">
+              <div className="form-check">
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id="ocultarFinalizadas"
+                  checked={ocultarFinalizadas}
+                  onChange={e =>
+                    setOcultarFinalizadas(e.target.checked)
+                  }
+                />
+                <label
+                  className="form-check-label small"
+                  htmlFor="ocultarFinalizadas"
+                >
+                  Ocultar finalizadas
+                </label>
+              </div>
+            </div>
+
           </div>
 
           {/* =========================
@@ -516,6 +545,18 @@ export default function GestionesPage({ token }) {
               }
             </div>
 
+          ) : gestionesVisibles.length === 0 ? (
+
+            <div className="text-center text-muted py-5">
+              Todas las gestiones de este filtro están finalizadas.{" "}
+              <button
+                className="btn btn-link p-0 align-baseline"
+                onClick={() => setOcultarFinalizadas(false)}
+              >
+                Mostrarlas
+              </button>
+            </div>
+
           ) : (
 
             <div className="table-responsive">
@@ -528,7 +569,6 @@ export default function GestionesPage({ token }) {
                     <th>Gestión</th>
                     <th>Versión</th>
                     <th>Estado</th>
-                    <th>Locales</th>
                     <th>Avance</th>
                     <th />
                   </tr>
@@ -536,7 +576,7 @@ export default function GestionesPage({ token }) {
 
                 <tbody>
 
-                  {gestiones.map(gestion => {
+                  {gestionesVisibles.map(gestion => {
                     const resumen =
                       gestion.resumen || {};
 
@@ -596,10 +636,6 @@ export default function GestionesPage({ token }) {
                           >
                             {gestion.estado_nombre}
                           </span>
-                        </td>
-
-                        <td>
-                          {totalLocales}
                         </td>
 
                         <td

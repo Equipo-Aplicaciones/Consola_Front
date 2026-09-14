@@ -15,7 +15,17 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   const [comentarioMasivo, setComentarioMasivo] = useState("");
   const [guardandoMasivo, setGuardandoMasivo] = useState(false);
   const [motivo, setMotivo] = useState("");
-  const [showSuspender, setShowSuspender] = useState(false);
+  // null | "suspender" | "cancelar" — qué confirmación con motivo está abierta
+  const [confirmando, setConfirmando] = useState(null);
+  const [editando, setEditando] = useState(false);
+  const [formEdicion, setFormEdicion] = useState({
+    nombre: "",
+    descripcion: "",
+    version: "",
+    fecha_inicio: ""
+  });
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [errorEdicion, setErrorEdicion] = useState("");
 
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
   const role = user.role;
@@ -83,11 +93,13 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
     setGestion(null);
     setError("");
     setMotivo("");
-    setShowSuspender(false);
+    setConfirmando(null);
     setFiltroEstado("");
     setSeleccionados([]);
     setEstadoMasivo("");
     setComentarioMasivo("");
+    setEditando(false);
+    setErrorEdicion("");
     cargarEstados();
     cargarGestion();
   }, [show, cargarEstados, cargarGestion]);
@@ -146,6 +158,63 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
     const [year, month, day] = valor.split("-");
 
     return `${day}/${month}/${year}`;
+  };
+
+  const iniciarEdicion = () => {
+    setFormEdicion({
+      nombre: gestion.nombre || "",
+      descripcion: gestion.descripcion || "",
+      version: gestion.version || "",
+      fecha_inicio: String(gestion.fecha_inicio || "").substring(0, 10)
+    });
+    setErrorEdicion("");
+    setEditando(true);
+  };
+
+  const cancelarEdicion = () => {
+    setEditando(false);
+    setErrorEdicion("");
+  };
+
+  const guardarEdicion = async () => {
+    if (!formEdicion.nombre.trim()) {
+      setErrorEdicion("El nombre no puede estar vacío");
+      return;
+    }
+
+    try {
+      setGuardandoEdicion(true);
+      setErrorEdicion("");
+
+      const res = await fetch(`${API_BASE_URL}/gestiones/${gestion.id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          nombre: formEdicion.nombre.trim(),
+          descripcion: formEdicion.descripcion.trim() || null,
+          version: formEdicion.version.trim() || null,
+          fecha_inicio: formEdicion.fecha_inicio
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Error actualizando gestión");
+      }
+
+      setGestion(prev => ({ ...prev, ...data }));
+      setEditando(false);
+      if (refresh) refresh();
+    } catch (err) {
+      console.error(err);
+      setErrorEdicion(err.message || "Error actualizando gestión");
+    } finally {
+      setGuardandoEdicion(false);
+    }
   };
 
   const badgeGestion = codigo => {
@@ -498,7 +567,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
       }
 
       setMotivo("");
-      setShowSuspender(false);
+      setConfirmando(null);
 
       await cargarGestion();
 
@@ -526,6 +595,22 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
 
     await ejecutarAccion(
       "suspender",
+      {
+        motivo: motivo.trim()
+      }
+    );
+  };
+
+  const cancelarGestion = async () => {
+    if (!motivo.trim()) {
+      setError(
+        "Debe indicar el motivo de la cancelación."
+      );
+      return;
+    }
+
+    await ejecutarAccion(
+      "cancelar",
       {
         motivo: motivo.trim()
       }
@@ -570,52 +655,114 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
           <>
             {/* CABECERA */}
             <div className="d-flex flex-column flex-md-row justify-content-between gap-3 mb-2">
-              <div>
-                <h4 className="mb-1">
-                  {gestion.nombre}
-                </h4>
+              <div className="flex-grow-1">
+                {editando ? (
+                  <>
+                    <Form.Control
+                      className="mb-1"
+                      value={formEdicion.nombre}
+                      onChange={e =>
+                        setFormEdicion(prev => ({ ...prev, nombre: e.target.value }))
+                      }
+                      placeholder="Nombre"
+                    />
+                    <Form.Control
+                      as="textarea"
+                      rows={2}
+                      value={formEdicion.descripcion}
+                      onChange={e =>
+                        setFormEdicion(prev => ({ ...prev, descripcion: e.target.value }))
+                      }
+                      placeholder="Descripción"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <h4 className="mb-1">
+                      {gestion.nombre}
+                    </h4>
 
-                <div className="text-muted">
-                  {gestion.descripcion || "Sin descripción"}
-                </div>
+                    <div className="text-muted">
+                      {gestion.descripcion || "Sin descripción"}
+                    </div>
+                  </>
+                )}
               </div>
 
-              <div className="text-md-end">
+              <div className="text-md-end d-flex flex-md-column align-items-md-end gap-2">
                 <Badge
                   bg={badgeGestion(gestion.estado_codigo)}
                   className="fs-6"
                 >
                   {gestion.estado_nombre}
                 </Badge>
+
+                {puedeAdministrarGestion && !editando && (
+                  <Button
+                    size="sm"
+                    variant="outline-secondary"
+                    onClick={iniciarEdicion}
+                  >
+                    <i className="bi bi-pencil me-1" />
+                    Editar
+                  </Button>
+                )}
               </div>
             </div>
+
+            {errorEdicion && (
+              <div className="alert alert-danger py-2">
+                {errorEdicion}
+              </div>
+            )}
 
             {/* INFORMACIÓN GENERAL */}
             <div className="row g-3 mb-2">
               <div className="col-6 col-md-3">
                 <div className="card shadow-sm h-100 p-2">
-                  <div className="card-body d-flex justify-content-start gap-3 p-0">
+                  <div className="card-body d-flex justify-content-start gap-3 p-0 align-items-center">
                     <div className="text-muted small">
                       Versión
                     </div>
 
-                    <strong>
-                      {gestion.version || "--"}
-                    </strong>
+                    {editando ? (
+                      <Form.Control
+                        size="sm"
+                        value={formEdicion.version}
+                        onChange={e =>
+                          setFormEdicion(prev => ({ ...prev, version: e.target.value }))
+                        }
+                      />
+                    ) : (
+                      <strong>
+                        {gestion.version || "--"}
+                      </strong>
+                    )}
                   </div>
                 </div>
               </div>
 
               <div className="col-6 col-md-3">
                 <div className="card shadow-sm h-100 p-2">
-                  <div className="card-body d-flex justify-content-start gap-3 p-0">
+                  <div className="card-body d-flex justify-content-start gap-3 p-0 align-items-center">
                     <div className="text-muted small">
                       Inicio
                     </div>
 
-                    <strong>
-                      {formatoFecha(gestion.fecha_inicio)}
-                    </strong>
+                    {editando ? (
+                      <Form.Control
+                        size="sm"
+                        type="date"
+                        value={formEdicion.fecha_inicio}
+                        onChange={e =>
+                          setFormEdicion(prev => ({ ...prev, fecha_inicio: e.target.value }))
+                        }
+                      />
+                    ) : (
+                      <strong>
+                        {formatoFecha(gestion.fecha_inicio)}
+                      </strong>
+                    )}
                   </div>
                 </div>
               </div>
@@ -648,6 +795,28 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                 </div>
               </div>
             </div>
+
+            {editando && (
+              <div className="d-flex justify-content-end gap-2 mb-3">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={cancelarEdicion}
+                  disabled={guardandoEdicion}
+                >
+                  Cancelar
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={guardarEdicion}
+                  disabled={guardandoEdicion}
+                >
+                  {guardandoEdicion ? "Guardando..." : "Guardar cambios"}
+                </Button>
+              </div>
+            )}
 
             {/* PROGRESO */}
             <div className="progress mb-3">
@@ -995,119 +1164,145 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
               </Table>
             </div>
 
-            {/* SUSPENSIÓN - SOLO ADMIN / N2 */}
-            {puedeAdministrarGestion &&
-              showSuspender && (
-              <div className="border rounded p-3 mt-3">
-                <Form.Label>
-                  Motivo de suspensión
-                </Form.Label>
-
-                <Form.Control
-                  as="textarea"
-                  rows={2}
-                  value={motivo}
-                  onChange={e =>
-                    setMotivo(e.target.value)
-                  }
-                />
-
-                <div className="d-flex gap-2 mt-2">
-                  <Button
-                    variant="warning"
-                    onClick={suspender}
-                    disabled={accionando}
-                  >
-                    Confirmar suspensión
-                  </Button>
-
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setShowSuspender(false);
-                      setMotivo("");
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            )}
           </>
         )}
       </Modal.Body>
 
       {gestion && (
         <Modal.Footer>
-          <div className="d-flex flex-wrap gap-2 w-100">
+          {confirmando ? (
+            <div className="w-100">
+              <Form.Label>
+                {confirmando === "suspender"
+                  ? "Motivo de suspensión"
+                  : "Motivo de cancelación"}
+              </Form.Label>
 
-            {/* ADMIN / N2 / N1 */}
-            {gestion.estado_codigo === "PENDIENTE" && (
-              <Button
-                variant="primary"
-                disabled={accionando}
-                onClick={() =>
-                  ejecutarAccion("iniciar")
+              <Form.Control
+                as="textarea"
+                rows={2}
+                autoFocus
+                value={motivo}
+                onChange={e =>
+                  setMotivo(e.target.value)
                 }
-              >
-                <i className="bi bi-play-fill me-1" />
-                Iniciar
-              </Button>
-            )}
+              />
 
-            {/* SOLO ADMIN / N2 */}
-            {puedeAdministrarGestion &&
-              gestion.estado_codigo === "EN_EJECUCION" && (
-              <>
+              <div className="d-flex gap-2 mt-2 justify-content-end">
                 <Button
-                  variant="warning"
+                  variant="secondary"
+                  disabled={accionando}
+                  onClick={() => {
+                    setConfirmando(null);
+                    setMotivo("");
+                    setError("");
+                  }}
+                >
+                  Volver
+                </Button>
+
+                <Button
+                  variant={confirmando === "suspender" ? "warning" : "danger"}
+                  disabled={accionando}
+                  onClick={
+                    confirmando === "suspender"
+                      ? suspender
+                      : cancelarGestion
+                  }
+                >
+                  {confirmando === "suspender"
+                    ? "Confirmar suspensión"
+                    : "Confirmar cancelación"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="d-flex flex-wrap gap-2 w-100">
+
+              {/* ADMIN / N2 / N1 */}
+              {gestion.estado_codigo === "PENDIENTE" && (
+                <Button
+                  variant="primary"
                   disabled={accionando}
                   onClick={() =>
-                    setShowSuspender(true)
+                    ejecutarAccion("iniciar")
                   }
                 >
-                  <i className="bi bi-pause-fill me-1" />
-                  Suspender
+                  <i className="bi bi-play-fill me-1" />
+                  Iniciar
                 </Button>
+              )}
 
+              {/* SOLO ADMIN / N2 */}
+              {puedeAdministrarGestion &&
+                gestion.estado_codigo === "EN_EJECUCION" && (
+                <>
+                  <Button
+                    variant="warning"
+                    disabled={accionando}
+                    onClick={() =>
+                      setConfirmando("suspender")
+                    }
+                  >
+                    <i className="bi bi-pause-fill me-1" />
+                    Suspender
+                  </Button>
+
+                  <Button
+                    variant="success"
+                    disabled={
+                      accionando ||
+                      resumen.pendiente > 0
+                    }
+                    onClick={() =>
+                      ejecutarAccion("finalizar")
+                    }
+                  >
+                    <i className="bi bi-check-circle me-1" />
+                    Finalizar
+                  </Button>
+                </>
+              )}
+
+              {/* ADMIN / N2 / N1 */}
+              {gestion.estado_codigo === "SUSPENDIDA" && (
                 <Button
-                  variant="success"
-                  disabled={
-                    accionando ||
-                    resumen.pendiente > 0
-                  }
+                  variant="primary"
+                  disabled={accionando}
                   onClick={() =>
-                    ejecutarAccion("finalizar")
+                    ejecutarAccion("reanudar")
                   }
                 >
-                  <i className="bi bi-check-circle me-1" />
-                  Finalizar
+                  <i className="bi bi-play-fill me-1" />
+                  Reanudar
                 </Button>
-              </>
-            )}
+              )}
 
-            {/* ADMIN / N2 / N1 */}
-            {gestion.estado_codigo === "SUSPENDIDA" && (
+              {/* SOLO ADMIN */}
+              {role === "Admin" &&
+                gestion.estado_codigo !== "FINALIZADA" &&
+                gestion.estado_codigo !== "CANCELADA" && (
+                <Button
+                  variant="outline-danger"
+                  disabled={accionando}
+                  onClick={() =>
+                    setConfirmando("cancelar")
+                  }
+                >
+                  <i className="bi bi-x-circle me-1" />
+                  Cancelar gestión
+                </Button>
+              )}
+
               <Button
-                variant="primary"
-                disabled={accionando}
-                onClick={() =>
-                  ejecutarAccion("reanudar")
-                }
+                variant="secondary"
+                className="ms-auto"
+                onClick={onClose}
               >
-                <i className="bi bi-play-fill me-1" />
-                Reanudar
+                Cerrar
               </Button>
-            )}
-
-            <Button
-              variant="secondary"
-              className="ms-auto"
-              onClick={onClose}
-            >
-              Cerrar
-            </Button>
-          </div>
+            </div>
+          )}
         </Modal.Footer>
       )}
     </Modal>

@@ -195,8 +195,8 @@ export default function Vendedores({ token }) {
                 </select>
               </div>
 
-              <div className="table-responsive">
-                <table className="table table-sm table-hover align-middle mb-0 small" style={{ maxHeight: 200, overflowY: "auto" }}>
+              <div className="table-responsive" style={{ maxHeight: 200, overflowY: "auto" }}>
+                <table className="table table-sm table-hover align-middle mb-0 small" >
                   <thead>
                     <tr>
                       <th>Fecha</th>

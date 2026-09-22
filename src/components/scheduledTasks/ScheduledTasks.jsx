@@ -158,6 +158,7 @@ function ScheduledTasks({token}) {
                 <thead className="sticky-top bg-white shadow-sm">
                   <tr className="table-secondary ">
                   <th>Nombre</th>
+                  <th>Tipo</th>
                   <th>Activar</th>
                   <th>Desactivar</th>
                   <th className="text-center">Estado</th>
@@ -169,31 +170,48 @@ function ScheduledTasks({token}) {
                 tasks.map(task=>(
                   <tr key={task.id}>
                     <td>{task.nombre}</td>
+                    <td>
+                      {
+                        task.tipo_accion === "VACIAR_TABLA" ?
+                        <Badge bg="warning" text="dark">Vaciar tabla</Badge>
+                        : task.tipo_accion === "OTRO" ?
+                        <Badge bg="dark">Otros</Badge>
+                        :
+                        <Badge bg="secondary">Artículos</Badge>
+                      }
+                    </td>
                     <td>{obtenerDia(task.dia_activar)}</td>
                     <td>{obtenerDia(task.dia_desactivar)}</td>
                     <td className="text-center">
                       {
-                        task.visible ?
-                        <Badge bg="success">Visible</Badge>
+                        task.tipo_accion === "VACIAR_TABLA" ?
+                        "-"
                         :
-                        <Badge bg="danger">Invisible</Badge>
+                        (
+                          task.visible ?
+                          <Badge bg="success">Visible</Badge>
+                          :
+                          <Badge bg="danger">Invisible</Badge>
+                        )
                       }
                     </td>
                     
                     <td className="text-center">
                       <div className="d-flex justify-content-center align-items-center">
-                        <div className="d-none d-md-flex gap-2">  
-                          <button size="sm" className="btn btn-sm btn-primary me-1" title="Ejecutar tarea" 
-                            onClick={()=>ejecutarTarea(task.id)} disabled={runningTaskId === task.id} >
-                              {runningTaskId === task.id && runningType === "run" ? (
-                                  <>
-                                      <span className="spinner-border spinner-border-sm me-2" role="status"/>
-                                      Ejecutando...
-                                  </>
-                              ) : (
-                                  <i className="bi bi-play-fill"></i>
-                              )}
-                            </button>
+                        <div className="d-none d-md-flex gap-2">
+                          {task.tipo_accion !== "OTRO" && (
+                            <button size="sm" className="btn btn-sm btn-primary me-1" title="Ejecutar tarea"
+                              onClick={()=>ejecutarTarea(task.id)} disabled={runningTaskId === task.id} >
+                                {runningTaskId === task.id && runningType === "run" ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2" role="status"/>
+                                        Ejecutando...
+                                    </>
+                                ) : (
+                                    <i className="bi bi-play-fill"></i>
+                                )}
+                              </button>
+                          )}
                           <button size="sm" className="btn btn-sm btn-secondary me-1" title="Editar tarea" onClick={()=>{
                             setEditTask(task);
                             setShowModal(true);
@@ -202,19 +220,21 @@ function ScheduledTasks({token}) {
                             setSelectedTask(task);
                             setShowResults(true);
                           }}>📋</button>
-                          <button size="sm" className="btn btn-sm btn-danger me-1" title="Reintentar tarea" 
-                          onClick={()=>reintentar(task.id)} disabled={runningTaskId === task.id}>
-                            {runningTaskId === task.id && runningType === "retry" ? (
-                                  <>
-                                      <span className="spinner-border spinner-border-sm me-2" role="status"/>
-                                      Reintentando...
-                                  </>
-                              ) : (
-                                  <i className="bi bi-arrow-clockwise"></i>
-                              )}
-                                                       
-                            </button>
-                          <button title={task.activo ? "Desactivar Tarea" : "Activar Tarea"} 
+                          {task.tipo_accion !== "OTRO" && (
+                            <button size="sm" className="btn btn-sm btn-danger me-1" title="Reintentar tarea"
+                            onClick={()=>reintentar(task.id)} disabled={runningTaskId === task.id}>
+                              {runningTaskId === task.id && runningType === "retry" ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2" role="status"/>
+                                        Reintentando...
+                                    </>
+                                ) : (
+                                    <i className="bi bi-arrow-clockwise"></i>
+                                )}
+
+                              </button>
+                          )}
+                          <button title={task.activo ? "Desactivar Tarea" : "Activar Tarea"}
                                     className={`btn btn-sm ${ task.activo
                                       ? "btn-success "
                                       : "btn-secondary "
@@ -223,13 +243,13 @@ function ScheduledTasks({token}) {
                                         {task.activo ? "⏻" : "⏻"}
                                     </button>
                           </div>
-                          <MobileActions  
+                          <MobileActions
                             actions={[
-                              {
-                                label: "Ejecutar",   
+                              ...(task.tipo_accion !== "OTRO" ? [{
+                                label: "Ejecutar",
                                 icon: "bi bi-play-fill",
-                                onClick: () => ejecutarTarea(task.id), 
-                              },
+                                onClick: () => ejecutarTarea(task.id),
+                              }] : []),
                               {
                                 label: "Editar",
                                 icon: "bi bi-pencil",
@@ -246,11 +266,11 @@ function ScheduledTasks({token}) {
                                   setShowResults(true);
                                 }
                               },
-                              {
+                              ...(task.tipo_accion !== "OTRO" ? [{
                                 label: "Reintentar",
                                 icon: "bi bi-arrow-clockwise",
                                 onClick: () => reintentar(task.id),
-                              },
+                              }] : []),
                               {
                                 label: task.activo ? "Desactivar" : "Activar",
                                 icon: task.activo ? "bi bi-toggle-on" : "bi bi-toggle-off",

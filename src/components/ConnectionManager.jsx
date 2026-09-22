@@ -18,8 +18,88 @@ function ConnectionManager({ token }) {
   const [consultandoVendedor, setConsultandoVendedor] = useState(false);
   const [guardandoVendedor, setGuardandoVendedor] = useState(false);
   const [mensajeVendedor, setMensajeVendedor] = useState("");
+  const [activeSubTab, setActiveSubTab] = useState("vendedor");
+  const [savedQueries, setSavedQueries] = useState([]);
+  const [selectedQueryId, setSelectedQueryId] = useState("");
+  const [sqlText, setSqlText] = useState("");
+  const [ejecutandoQuery, setEjecutandoQuery] = useState(false);
+  const [resultadoQuery, setResultadoQuery] = useState(null);
+  const [errorQuery, setErrorQuery] = useState("");
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
   const isAdmin = user.role === "Admin" || user.role === "N2";
+  const isAdminOnly = user.role === "Admin";
+
+  const cargarSavedQueries = useCallback(async () => {
+    try {
+      const data = await apiFetch("/saved-queries");
+      setSavedQueries((data || []).filter(q => q.activo));
+    } catch {
+      setSavedQueries([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isAdminOnly) {
+      cargarSavedQueries();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdminOnly]);
+
+  const limpiarQuery = () => {
+    setSelectedQueryId("");
+    setSqlText("");
+    setResultadoQuery(null);
+    setErrorQuery("");
+  };
+
+  function onSeleccionarQuery(opt) {
+    const id = opt?.value || "";
+    setSelectedQueryId(id);
+    setResultadoQuery(null);
+    setErrorQuery("");
+    const q = savedQueries.find(sq => String(sq.id) === String(id));
+    setSqlText(q?.sql_text || "");
+  }
+
+  const ejecutarQuery = async () => {
+    if (!selectedQueryId || !sqlText.trim()) return;
+
+    const esSelect = sqlText.trim().toUpperCase().startsWith("SELECT");
+
+    if (!esSelect) {
+      const ok = window.confirm(
+        "Esta query modificará datos reales en el local conectado. ¿Confirma ejecutarla?"
+      );
+      if (!ok) return;
+    }
+
+    setEjecutandoQuery(true);
+    setResultadoQuery(null);
+    setErrorQuery("");
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/saved-queries/${selectedQueryId}/run`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ connectionId: selected, sql: sqlText })
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setErrorQuery(data.message || "Error ejecutando la query.");
+        return;
+      }
+
+      setResultadoQuery(data);
+    } catch {
+      setErrorQuery("Error de conexión al backend.");
+    } finally {
+      setEjecutandoQuery(false);
+    }
+  };
 
   async function cargarEmpresas() {
     const res = await fetch(`${API_BASE_URL}/empresas`, {
@@ -225,6 +305,7 @@ function ConnectionManager({ token }) {
             setEmpresaSeleccionada(opt?.value || "");
             setSelected("");
             limpiarVendedor();
+            limpiarQuery();
             localStorage.removeItem("connectedConnectionId");
             localStorage.removeItem("connectedConnectionName");
             localStorage.removeItem("connectionStatus");
@@ -248,6 +329,7 @@ function ConnectionManager({ token }) {
             const id = opt?.value || "";
             setSelected(id);
             limpiarVendedor();
+            limpiarQuery();
             localStorage.setItem("connectedConnectionId", "");
             localStorage.setItem("connectedConnectionName", "");
             localStorage.setItem("connectionStatus", "PENDING");
@@ -272,13 +354,37 @@ function ConnectionManager({ token }) {
       {isAdmin && (
         <>
           <hr className="my-3" />
-          <h5 className="mb-1">Consultar Vendedor</h5>
 
           {!selected || String(connectedId) !== String(selected) ? (
             <div className="alert alert-secondary mb-0 p-1 px-2">
-              Seleccione un local para consultar un vendedor.
+              Seleccione un local para consultar un vendedor{isAdminOnly ? " o ejecutar una query" : ""}.
             </div>
           ) : (
+            <>
+              {isAdminOnly && (
+                <ul className="nav nav-tabs mb-3">
+                  <li className="nav-item">
+                    <button
+                      type="button"
+                      className={`nav-link ${activeSubTab === "vendedor" ? "active" : ""}`}
+                      onClick={() => setActiveSubTab("vendedor")}
+                    >
+                      Consultar Vendedor
+                    </button>
+                  </li>
+                  <li className="nav-item">
+                    <button
+                      type="button"
+                      className={`nav-link ${activeSubTab === "querys" ? "active" : ""}`}
+                      onClick={() => setActiveSubTab("querys")}
+                    >
+                      Acciones Querys
+                    </button>
+                  </li>
+                </ul>
+              )}
+
+              {(activeSubTab === "vendedor" || !isAdminOnly) && (
             <div>
               <div className="row g-3 align-items-center">
                 {selectedConnection && (
@@ -382,6 +488,81 @@ function ConnectionManager({ token }) {
                 </div>
               )}
             </div>
+              )}
+
+              {isAdminOnly && activeSubTab === "querys" && (
+                <div>
+                  <div className="row g-3 align-items-end mb-3">
+                    <div className="col-md-6">
+                      <label className="form-label fw-bold">Query guardada</label>
+                      <Select
+                        options={savedQueries.map(q => ({ value: q.id, label: q.nombre }))}
+                        value={savedQueries
+                          .map(q => ({ value: q.id, label: q.nombre }))
+                          .find(opt => String(opt.value) === String(selectedQueryId)) || null}
+                        onChange={onSeleccionarQuery}
+                        placeholder="Selecciona una query..."
+                      />
+                    </div>
+                  </div>
+
+                  {selectedQueryId && (
+                    <>
+                      <div className="mb-3">
+                        <label className="form-label fw-bold">SQL a ejecutar</label>
+                        <textarea
+                          className="form-control font-monospace"
+                          rows={6}
+                          value={sqlText}
+                          onChange={e => setSqlText(e.target.value)}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={ejecutarQuery}
+                        disabled={ejecutandoQuery || !sqlText.trim()}
+                      >
+                        {ejecutandoQuery ? "Ejecutando..." : "Ejecutar"}
+                      </button>
+                    </>
+                  )}
+
+                  {errorQuery && (
+                    <div className="alert alert-danger mt-3 mb-0">{errorQuery}</div>
+                  )}
+
+                  {resultadoQuery && (
+                    <div className="mt-3">
+                      <div className="alert alert-info mb-2">{resultadoQuery.message}</div>
+                      {Array.isArray(resultadoQuery.data) && resultadoQuery.data.length > 0 && (
+                        <div className="table-responsive" style={{ maxHeight: 300, overflowY: "auto" }}>
+                          <table className="table table-sm table-striped">
+                            <thead>
+                              <tr>
+                                {Object.keys(resultadoQuery.data[0]).map(col => (
+                                  <th key={col}>{col}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {resultadoQuery.data.map((fila, i) => (
+                                <tr key={i}>
+                                  {Object.keys(resultadoQuery.data[0]).map(col => (
+                                    <td key={col}>{String(fila[col])}</td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </>
       )}

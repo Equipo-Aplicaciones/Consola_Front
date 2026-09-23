@@ -6,6 +6,21 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
 
   const [categorias, setCategorias] = useState([]);
   const [modoEdicion, setModoEdicion] = useState(false);
+  const [sugerencias, setSugerencias] = useState({ categorias: [], claves: [] });
+
+  useEffect(() => {
+    if (!show) return;
+
+    fetch(`${API_BASE_URL}/connections/caracteristicas/sugerencias`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => setSugerencias({
+        categorias: data.categorias || [],
+        claves: data.claves || []
+      }))
+      .catch(() => setSugerencias({ categorias: [], claves: [] }));
+  }, [show, token]);
 
   useEffect(() => {
     if (!show) return;
@@ -187,6 +202,13 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
 
         {modoEdicion && (
         <>
+        <datalist id="sugerencias-categorias">
+          {sugerencias.categorias.map(c => <option key={c} value={c} />)}
+        </datalist>
+        <datalist id="sugerencias-claves">
+          {sugerencias.claves.map(c => <option key={c} value={c} />)}
+        </datalist>
+
         <p className="text-muted small">
           Agrupa los datos por categoría (ej: PC1, PC2, Impresoras) — dentro de cada
           una defines los pares que necesites, sin campos fijos.
@@ -200,6 +222,7 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
                 placeholder="Nombre de la categoría (ej: PC1)"
                 value={cat.nombre}
                 onChange={e => actualizarNombreCategoria(catIndex, e.target.value)}
+                list="sugerencias-categorias"
               />
               <Button
                 variant="link"
@@ -220,6 +243,7 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
                     onChange={e =>
                       actualizarPar(catIndex, parIndex, "key", e.target.value)
                     }
+                    list="sugerencias-claves"
                   />
                 </Col>
                 <Col md={7}>

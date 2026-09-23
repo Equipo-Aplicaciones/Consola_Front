@@ -4,43 +4,96 @@ import { API_BASE_URL } from "../../config";
 
 export default function CaracteristicasModal({ show, onClose, refresh, connection, token }) {
 
-  const [pares, setPares] = useState([]);
+  const [categorias, setCategorias] = useState([]);
 
   useEffect(() => {
     if (!show) return;
 
-    const caracteristicas = connection?.caracteristicas || {};
+    const data = connection?.caracteristicas || {};
 
-    const iniciales = Object.entries(caracteristicas).map(([key, value]) => ({
-      key,
-      value: String(value ?? "")
+    const iniciales = Object.entries(data).map(([nombre, valores]) => ({
+      nombre,
+      pares: Object.entries(valores || {}).map(([key, value]) => ({
+        key,
+        value: String(value ?? "")
+      }))
     }));
 
-    setPares(iniciales.length ? iniciales : [{ key: "", value: "" }]);
+    setCategorias(
+      iniciales.length
+        ? iniciales
+        : [{ nombre: "", pares: [{ key: "", value: "" }] }]
+    );
   }, [show, connection]);
 
-  function actualizarPar(index, campo, valor) {
-    setPares(prev =>
-      prev.map((par, i) => (i === index ? { ...par, [campo]: valor } : par))
+  function actualizarNombreCategoria(catIndex, nombre) {
+    setCategorias(prev =>
+      prev.map((cat, i) => (i === catIndex ? { ...cat, nombre } : cat))
     );
   }
 
-  function agregarPar() {
-    setPares(prev => [...prev, { key: "", value: "" }]);
+  function agregarCategoria() {
+    setCategorias(prev => [
+      ...prev,
+      { nombre: "", pares: [{ key: "", value: "" }] }
+    ]);
   }
 
-  function eliminarPar(index) {
-    setPares(prev => prev.filter((_, i) => i !== index));
+  function eliminarCategoria(catIndex) {
+    setCategorias(prev => prev.filter((_, i) => i !== catIndex));
+  }
+
+  function actualizarPar(catIndex, parIndex, campo, valor) {
+    setCategorias(prev =>
+      prev.map((cat, i) =>
+        i === catIndex
+          ? {
+              ...cat,
+              pares: cat.pares.map((par, j) =>
+                j === parIndex ? { ...par, [campo]: valor } : par
+              )
+            }
+          : cat
+      )
+    );
+  }
+
+  function agregarPar(catIndex) {
+    setCategorias(prev =>
+      prev.map((cat, i) =>
+        i === catIndex
+          ? { ...cat, pares: [...cat.pares, { key: "", value: "" }] }
+          : cat
+      )
+    );
+  }
+
+  function eliminarPar(catIndex, parIndex) {
+    setCategorias(prev =>
+      prev.map((cat, i) =>
+        i === catIndex
+          ? { ...cat, pares: cat.pares.filter((_, j) => j !== parIndex) }
+          : cat
+      )
+    );
   }
 
   async function guardar() {
     const caracteristicas = {};
 
-    for (const par of pares) {
-      const key = par.key.trim();
-      if (key) {
-        caracteristicas[key] = par.value;
+    for (const cat of categorias) {
+      const nombre = cat.nombre.trim();
+      if (!nombre) continue;
+
+      const valores = {};
+      for (const par of cat.pares) {
+        const key = par.key.trim();
+        if (key) {
+          valores[key] = par.value;
+        }
       }
+
+      caracteristicas[nombre] = valores;
     }
 
     try {
@@ -77,41 +130,74 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
       </Modal.Header>
       <Modal.Body>
         <p className="text-muted small">
-          Agrega los datos que necesites (RAM, disco, tarjeta de video, etc.) — no hay
-          campos fijos, defines el nombre de cada uno.
+          Agrupa los datos por categoría (ej: PC1, PC2, Impresoras) — dentro de cada
+          una defines los pares que necesites, sin campos fijos.
         </p>
 
-        {pares.map((par, index) => (
-          <Row key={index} className="g-2 mb-2 align-items-center">
-            <Col md={4}>
+        {categorias.map((cat, catIndex) => (
+          <div key={catIndex} className="border rounded p-3 mb-3">
+            <div className="d-flex align-items-center gap-2 mb-2">
               <Form.Control
-                placeholder="Ej: RAM"
-                value={par.key}
-                onChange={e => actualizarPar(index, "key", e.target.value)}
+                className="fw-bold"
+                placeholder="Nombre de la categoría (ej: PC1)"
+                value={cat.nombre}
+                onChange={e => actualizarNombreCategoria(catIndex, e.target.value)}
               />
-            </Col>
-            <Col md={7}>
-              <Form.Control
-                placeholder="Ej: 16GB"
-                value={par.value}
-                onChange={e => actualizarPar(index, "value", e.target.value)}
-              />
-            </Col>
-            <Col md={1}>
               <Button
                 variant="link"
                 className="text-danger p-0"
-                title="Eliminar"
-                onClick={() => eliminarPar(index)}
+                title="Eliminar categoría"
+                onClick={() => eliminarCategoria(catIndex)}
               >
-                <i className="bi bi-x-lg"></i>
+                <i className="bi bi-trash"></i>
               </Button>
-            </Col>
-          </Row>
+            </div>
+
+            {cat.pares.map((par, parIndex) => (
+              <Row key={parIndex} className="g-2 mb-2 align-items-center">
+                <Col md={4}>
+                  <Form.Control
+                    placeholder="Ej: RAM"
+                    value={par.key}
+                    onChange={e =>
+                      actualizarPar(catIndex, parIndex, "key", e.target.value)
+                    }
+                  />
+                </Col>
+                <Col md={7}>
+                  <Form.Control
+                    placeholder="Ej: 16GB"
+                    value={par.value}
+                    onChange={e =>
+                      actualizarPar(catIndex, parIndex, "value", e.target.value)
+                    }
+                  />
+                </Col>
+                <Col md={1}>
+                  <Button
+                    variant="link"
+                    className="text-danger p-0"
+                    title="Eliminar"
+                    onClick={() => eliminarPar(catIndex, parIndex)}
+                  >
+                    <i className="bi bi-x-lg"></i>
+                  </Button>
+                </Col>
+              </Row>
+            ))}
+
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => agregarPar(catIndex)}
+            >
+              ➕ Agregar dato
+            </Button>
+          </div>
         ))}
 
-        <Button variant="outline-secondary" size="sm" onClick={agregarPar}>
-          ➕ Agregar característica
+        <Button variant="outline-primary" size="sm" onClick={agregarCategoria}>
+          ➕ Agregar categoría
         </Button>
       </Modal.Body>
       <Modal.Footer>

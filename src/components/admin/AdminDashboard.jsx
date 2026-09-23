@@ -11,6 +11,7 @@ import DashboardAgotados from "../pages/DashboardAgotados";
 import ConnectionsAdmin from "./ConnectionsAdmin";
 import ScheduledTasks from "../scheduledTasks/ScheduledTasks";
 import GestionesPage from "../gestiones/GestionesPage";
+import SavedQueries from "../savedQueries/SavedQueries";
 
 import "./AdminDashboard.css";
 
@@ -52,7 +53,8 @@ function AdminDashboard({ token, role }) {
         { key: "users", label: "Usuarios", icon: "bi bi-people", roles: ["Admin"] },
         { key: "scheduled-tasks", label: "Tareas", icon: "bi bi-list-check" },
         { key: "gestiones", label: "Gestiones", icon: "bi bi-sliders" },
-        { key: "connections", label: "Locales", icon: "bi bi-shop" }
+        { key: "connections", label: "Locales", icon: "bi bi-shop" },
+        { key: "saved-queries", label: "Consultas SQL", icon: "bi bi-database-gear", roles: ["Admin"] }
       ]
     }
   ];
@@ -134,6 +136,9 @@ function AdminDashboard({ token, role }) {
 
       case "gestiones":
         return <GestionesPage token={token} />;
+
+      case "saved-queries":
+        return <SavedQueries token={token} />;
 
       default:
         return null;

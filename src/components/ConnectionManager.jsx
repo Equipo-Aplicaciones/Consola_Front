@@ -18,8 +18,91 @@ function ConnectionManager({ token }) {
   const [consultandoVendedor, setConsultandoVendedor] = useState(false);
   const [guardandoVendedor, setGuardandoVendedor] = useState(false);
   const [mensajeVendedor, setMensajeVendedor] = useState("");
+  const [activeSubTab, setActiveSubTab] = useState("vendedor");
+  const [savedQueries, setSavedQueries] = useState([]);
+  const [selectedQueryId, setSelectedQueryId] = useState("");
+  const [sqlText, setSqlText] = useState("");
+  const [ejecutandoQuery, setEjecutandoQuery] = useState(false);
+  const [resultadoQuery, setResultadoQuery] = useState(null);
+  const [errorQuery, setErrorQuery] = useState("");
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
   const isAdmin = user.role === "Admin" || user.role === "N2";
+  const isAdminOnly = user.role === "Admin";
+
+  const cargarSavedQueries = useCallback(async () => {
+    try {
+      const data = await apiFetch("/saved-queries");
+      setSavedQueries((data || []).filter(q => q.activo));
+    } catch {
+      setSavedQueries([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isAdminOnly) {
+      cargarSavedQueries();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdminOnly]);
+
+  const limpiarQuery = () => {
+    setSelectedQueryId("");
+    setSqlText("");
+    setResultadoQuery(null);
+    setErrorQuery("");
+  };
+
+  function onSeleccionarQuery(opt) {
+    const id = opt?.value || "";
+    setSelectedQueryId(id);
+    setResultadoQuery(null);
+    setErrorQuery("");
+    const q = savedQueries.find(sq => String(sq.id) === String(id));
+    setSqlText(q?.sql_text || "");
+  }
+
+  const ejecutarQuery = async () => {
+    if (!selectedQueryId || !sqlText.trim()) return;
+
+    const esSelect = sqlText.trim().toUpperCase().startsWith("SELECT");
+    const nombreLocal = selectedConnection
+      ? `${selectedConnection.codLocal} — ${selectedConnection.name}`
+      : "el local conectado";
+
+    const ok = window.confirm(
+      esSelect
+        ? `¿Confirma ejecutar esta consulta en ${nombreLocal}?`
+        : `Esta query modificará datos reales en ${nombreLocal}. ¿Confirma ejecutarla?`
+    );
+    if (!ok) return;
+
+    setEjecutandoQuery(true);
+    setResultadoQuery(null);
+    setErrorQuery("");
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/saved-queries/${selectedQueryId}/run`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ connectionId: selected, sql: sqlText })
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setErrorQuery(data.message || "Error ejecutando la query.");
+        return;
+      }
+
+      setResultadoQuery(data);
+    } catch {
+      setErrorQuery("Error de conexión al backend.");
+    } finally {
+      setEjecutandoQuery(false);
+    }
+  };
 
   async function cargarEmpresas() {
     const res = await fetch(`${API_BASE_URL}/empresas`, {
@@ -60,6 +143,10 @@ function ConnectionManager({ token }) {
   const selectedConnection = useMemo(() => {
     return connections.find(c => String(c.id) === String(selected)) || null;
   }, [connections, selected]);
+
+  const queryDescripcionActual = useMemo(() => {
+    return savedQueries.find(q => String(q.id) === String(selectedQueryId))?.descripcion || "";
+  }, [savedQueries, selectedQueryId]);
 
   useEffect(() => {
     cargarEmpresas();
@@ -209,8 +296,7 @@ function ConnectionManager({ token }) {
       <div className="d-flex gap-4 align-items-center flex-wrap">
         <label className="form-label fw-bold mb-0">Empresa:</label>
         <Select
-          className="flex-grow-1"
-          styles={{ container: base => ({ ...base, minWidth: 220 }) }}
+          styles={{ container: base => ({ ...base, width: 220, flex: "0 0 220px" }) }}
           value={empresas
             .map(emp => ({
               value: emp.id,
@@ -225,6 +311,7 @@ function ConnectionManager({ token }) {
             setEmpresaSeleccionada(opt?.value || "");
             setSelected("");
             limpiarVendedor();
+            limpiarQuery();
             localStorage.removeItem("connectedConnectionId");
             localStorage.removeItem("connectedConnectionName");
             localStorage.removeItem("connectionStatus");
@@ -234,7 +321,7 @@ function ConnectionManager({ token }) {
           }}
         />
 
-        <Select className="flex-grow-1" styles={{ container: base => ({ ...base, minWidth: 320 }) }}
+        <Select styles={{ container: base => ({ ...base, flex: "1 1 0%", minWidth: 200 }) }}
           options={filteredConnections.map(c => ({
             value: c.id, label: `${c.codLocal ? `${c.codLocal} — ` : ""}${c.name} (${c.host})`
           }))}
@@ -248,6 +335,7 @@ function ConnectionManager({ token }) {
             const id = opt?.value || "";
             setSelected(id);
             limpiarVendedor();
+            limpiarQuery();
             localStorage.setItem("connectedConnectionId", "");
             localStorage.setItem("connectedConnectionName", "");
             localStorage.setItem("connectionStatus", "PENDING");
@@ -272,13 +360,37 @@ function ConnectionManager({ token }) {
       {isAdmin && (
         <>
           <hr className="my-3" />
-          <h5 className="mb-1">Consultar Vendedor</h5>
 
           {!selected || String(connectedId) !== String(selected) ? (
             <div className="alert alert-secondary mb-0 p-1 px-2">
-              Seleccione un local para consultar un vendedor.
+              Seleccione un local para consultar un vendedor{isAdminOnly ? " o ejecutar una query" : ""}.
             </div>
           ) : (
+            <>
+              {isAdminOnly && (
+                <ul className="nav nav-tabs mb-3">
+                  <li className="nav-item">
+                    <button
+                      type="button"
+                      className={`nav-link ${activeSubTab === "vendedor" ? "active" : ""}`}
+                      onClick={() => setActiveSubTab("vendedor")}
+                    >
+                      Consultar Vendedor
+                    </button>
+                  </li>
+                  <li className="nav-item">
+                    <button
+                      type="button"
+                      className={`nav-link ${activeSubTab === "querys" ? "active" : ""}`}
+                      onClick={() => setActiveSubTab("querys")}
+                    >
+                      Acciones Querys
+                    </button>
+                  </li>
+                </ul>
+              )}
+
+              {(activeSubTab === "vendedor" || !isAdminOnly) && (
             <div>
               <div className="row g-3 align-items-center">
                 {selectedConnection && (
@@ -382,6 +494,64 @@ function ConnectionManager({ token }) {
                 </div>
               )}
             </div>
+              )}
+
+              {isAdminOnly && activeSubTab === "querys" && (
+                <div>
+                  <div className="d-flex align-items-center gap-2 mb-3">
+                    <label className="form-label fw-bold mb-0 text-nowrap">Query guardada:</label>
+                    <div style={{ minWidth: 280 }} className="flex-grow-1">
+                      <Select
+                        options={savedQueries.map(q => ({ value: q.id, label: q.nombre }))}
+                        value={savedQueries
+                          .map(q => ({ value: q.id, label: q.nombre }))
+                          .find(opt => String(opt.value) === String(selectedQueryId)) || null}
+                        onChange={onSeleccionarQuery}
+                        placeholder="Selecciona una query..."
+                      />
+                    </div>
+                  </div>
+
+                  {selectedQueryId && (
+                    <>
+                      {queryDescripcionActual && (
+                        <div className="alert alert-secondary py-2 px-3 mb-3">
+                          {queryDescripcionActual}
+                        </div>
+                      )}
+
+                      <div className="mb-3">
+                        <label className="form-label fw-bold">SQL a ejecutar</label>
+                        <pre className="bg-light border rounded p-2 mb-0" style={{ whiteSpace: "pre-wrap", maxHeight: 150, overflowY: "auto" }}>
+                          {sqlText}
+                        </pre>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={ejecutarQuery}
+                        disabled={ejecutandoQuery || !sqlText.trim()}
+                      >
+                        {ejecutandoQuery ? "Ejecutando..." : "Ejecutar"}
+                      </button>
+                    </>
+                  )}
+
+                  {errorQuery && (
+                    <div className="alert alert-danger mt-3 mb-0">
+                      ❌ {errorQuery}
+                    </div>
+                  )}
+
+                  {resultadoQuery && (
+                    <div className="alert alert-success mt-3 mb-0">
+                      ✅ {resultadoQuery.message}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </>
       )}

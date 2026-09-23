@@ -161,24 +161,28 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
             {!hayDatosGuardados ? (
               <p className="text-muted">Sin características registradas.</p>
             ) : (
-              categorias.map((cat, catIndex) => (
-                <div key={catIndex} className="mb-3">
-                  <div className="fw-bold mb-1">{cat.nombre}</div>
-                  {cat.pares.filter(p => p.key.trim()).length === 0 ? (
-                    <div className="text-muted small">Sin datos.</div>
-                  ) : (
-                    <ul className="list-unstyled mb-0 ps-3">
-                      {cat.pares
-                        .filter(p => p.key.trim())
-                        .map((p, parIndex) => (
-                          <li key={parIndex}>
-                            <strong>{p.key}:</strong> {p.value}
-                          </li>
-                        ))}
-                    </ul>
-                  )}
-                </div>
-              ))
+              <Row className="g-3">
+                {categorias.map((cat, catIndex) => (
+                  <Col key={catIndex} md={6}>
+                    <div className="border rounded p-2 h-100">
+                      <div className="fw-bold mb-1">{cat.nombre}</div>
+                      {cat.pares.filter(p => p.key.trim()).length === 0 ? (
+                        <div className="text-muted small">Sin datos.</div>
+                      ) : (
+                        <ul className="list-unstyled mb-0 ps-3">
+                          {cat.pares
+                            .filter(p => p.key.trim())
+                            .map((p, parIndex) => (
+                              <li key={parIndex}>
+                                <strong>{p.key}:</strong> {p.value}
+                              </li>
+                            ))}
+                        </ul>
+                      )}
+                    </div>
+                  </Col>
+                ))}
+              </Row>
             )}
 
             <div className="d-flex gap-2 mt-3">

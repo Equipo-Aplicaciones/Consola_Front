@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Dropdown } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 import MobileActions from "../utils/MobileActions";
 import ConnectionDetalleModal from "./ConnectionDetalleModal";
@@ -247,7 +248,7 @@ function ConnectionsAdmin({ token }) {
       );
     });
 
-    const exportarExcel = () => {
+    const exportarExcel = (extenso = false) => {
       const rows = dataFiltrada.map(local => ({
         "Código Local": local.codLocal,
         "Nombre Local": local.name,
@@ -276,13 +277,45 @@ function ConnectionsAdmin({ token }) {
         "Locales"
       );
 
+      if (extenso) {
+        const filasCaracteristicas = [];
+
+        dataFiltrada.forEach(local => {
+          const categorias = Object.entries(local.caracteristicas || {});
+
+          categorias.forEach(([categoria, valores]) => {
+            Object.entries(valores || {}).forEach(([clave, valor]) => {
+              filasCaracteristicas.push({
+                "Código Local": local.codLocal,
+                "Nombre Local": local.name,
+                "Categoría": categoria,
+                "Clave": clave,
+                "Valor": valor
+              });
+            });
+          });
+        });
+
+        const hojaCaracteristicas = XLSX.utils.json_to_sheet(
+          filasCaracteristicas.length
+            ? filasCaracteristicas
+            : [{ "Sin datos": "No hay características registradas" }]
+        );
+
+        XLSX.utils.book_append_sheet(
+          workbook,
+          hojaCaracteristicas,
+          "Características"
+        );
+      }
+
       const fecha = new Date()
         .toISOString()
         .split("T")[0];
 
       XLSX.writeFile(
         workbook,
-        `Locales_${fecha}.xlsx`
+        `Locales${extenso ? "_extenso" : ""}_${fecha}.xlsx`
       );
     };
 
@@ -505,11 +538,21 @@ function ConnectionsAdmin({ token }) {
               <th>Kiosko</th>
               <th>KDS</th>
               <th>Llamador IP</th>
-              <th className="text-center">Acciones 
-                <button className="btn btn-sm btn-outline-secondary mx-2 pr-1" onClick={exportarExcel} >
-                  <i className="bi bi-file-earmark-excel m-2"></i>
-                  Exportar 
-                </button>
+              <th className="text-center">Acciones
+                <Dropdown className="d-inline-block mx-2">
+                  <Dropdown.Toggle variant="outline-secondary" size="sm" id="dropdown-exportar-locales">
+                    <i className="bi bi-file-earmark-excel me-1"></i>
+                    Exportar
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu>
+                    <Dropdown.Item onClick={() => exportarExcel(false)}>
+                      Básico
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => exportarExcel(true)}>
+                      Extenso (con características)
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
               </th>
             </tr>
           </thead>

@@ -5,6 +5,7 @@ import { API_BASE_URL } from "../../config";
 export default function CaracteristicasModal({ show, onClose, refresh, connection, token }) {
 
   const [categorias, setCategorias] = useState([]);
+  const [modoEdicion, setModoEdicion] = useState(false);
 
   useEffect(() => {
     if (!show) return;
@@ -24,7 +25,18 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
         ? iniciales
         : [{ nombre: "", pares: [{ key: "", value: "" }] }]
     );
+
+    setModoEdicion(false);
   }, [show, connection]);
+
+  const hayDatosGuardados = Object.keys(connection?.caracteristicas || {}).length > 0;
+
+  function iniciarEdicion(conCategoriaNueva) {
+    setModoEdicion(true);
+    if (conCategoriaNueva) {
+      agregarCategoria();
+    }
+  }
 
   function actualizarNombreCategoria(catIndex, nombre) {
     setCategorias(prev =>
@@ -129,6 +141,52 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
+        {!modoEdicion && (
+          <>
+            {!hayDatosGuardados ? (
+              <p className="text-muted">Sin características registradas.</p>
+            ) : (
+              categorias.map((cat, catIndex) => (
+                <div key={catIndex} className="mb-3">
+                  <div className="fw-bold mb-1">{cat.nombre}</div>
+                  {cat.pares.filter(p => p.key.trim()).length === 0 ? (
+                    <div className="text-muted small">Sin datos.</div>
+                  ) : (
+                    <ul className="list-unstyled mb-0 ps-3">
+                      {cat.pares
+                        .filter(p => p.key.trim())
+                        .map((p, parIndex) => (
+                          <li key={parIndex}>
+                            <strong>{p.key}:</strong> {p.value}
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              ))
+            )}
+
+            <div className="d-flex gap-2 mt-3">
+              <Button
+                variant="outline-primary"
+                size="sm"
+                onClick={() => iniciarEdicion(true)}
+              >
+                ➕ Agregar categoría
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => iniciarEdicion(false)}
+              >
+                ✏️ Editar
+              </Button>
+            </div>
+          </>
+        )}
+
+        {modoEdicion && (
+        <>
         <p className="text-muted small">
           Agrupa los datos por categoría (ej: PC1, PC2, Impresoras) — dentro de cada
           una defines los pares que necesites, sin campos fijos.
@@ -199,14 +257,24 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
         <Button variant="outline-primary" size="sm" onClick={agregarCategoria}>
           ➕ Agregar categoría
         </Button>
+        </>
+        )}
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button onClick={guardar}>
-          Guardar
-        </Button>
+        {modoEdicion ? (
+          <>
+            <Button variant="secondary" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button onClick={guardar}>
+              Guardar
+            </Button>
+          </>
+        ) : (
+          <Button variant="secondary" onClick={onClose}>
+            Cerrar
+          </Button>
+        )}
       </Modal.Footer>
     </Modal>
   );

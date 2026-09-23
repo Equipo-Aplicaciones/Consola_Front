@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../config";
 import MobileActions from "../utils/MobileActions";
 import ConnectionDetalleModal from "./ConnectionDetalleModal";
+import CaracteristicasModal from "./CaracteristicasModal";
 import Select from "react-select";
 import * as XLSX from "xlsx";
 import { logout } from "../utils/logout";
@@ -31,6 +32,8 @@ function ConnectionsAdmin({ token }) {
   const [search, setSearch] = useState("");
   const [showDetalle, setShowDetalle] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [showCaracteristicas, setShowCaracteristicas] = useState(false);
+  const [connectionCaracteristicas, setConnectionCaracteristicas] = useState(null);
   const [empresas, setEmpresas] = useState([]);
   const [sessionExpired, setSessionExpired] = useState(false);
     
@@ -501,7 +504,7 @@ function ConnectionsAdmin({ token }) {
               <th>Formato</th>
               <th>Kiosko</th>
               <th>KDS</th>
-              <th>Llamador</th>
+              <th>Llamador IP</th>
               <th className="text-center">Acciones 
                 <button className="btn btn-sm btn-outline-secondary mx-2 pr-1" onClick={exportarExcel} >
                   <i className="bi bi-file-earmark-excel m-2"></i>
@@ -539,7 +542,13 @@ function ConnectionsAdmin({ token }) {
                             <button title="Editar local" className="btn btn-sm btn-primary" onClick={() => editar(row)} >
                                 ✏️
                             </button>
-                            <button title={row.activo ? "Desactivar Local" : "Activar Local"} 
+                            <button title="Características (RAM, disco, etc.)" className="btn btn-sm btn-outline-dark" onClick={() => {
+                                setConnectionCaracteristicas(row);
+                                setShowCaracteristicas(true);
+                                }}>
+                                🖥️
+                            </button>
+                            <button title={row.activo ? "Desactivar Local" : "Activar Local"}
                             className={`btn btn-sm ${ row.activo
                                 ? "btn-success "
                                 : "btn-secondary "
@@ -558,6 +567,14 @@ function ConnectionsAdmin({ token }) {
                                 label: "Editar",
                                 icon: "bi bi-pencil",
                                 onClick: () => editar(row),
+                                },
+                                {
+                                label: "Características",
+                                icon: "bi bi-pc-display",
+                                onClick: () => {
+                                  setConnectionCaracteristicas(row);
+                                  setShowCaracteristicas(true);
+                                },
                                 },
                                 {
                                 label: row.activo ? "Desactivar" : "Activar",
@@ -588,6 +605,14 @@ function ConnectionsAdmin({ token }) {
           token={token}
         />
       )}
+
+      <CaracteristicasModal
+        show={showCaracteristicas}
+        onClose={() => setShowCaracteristicas(false)}
+        refresh={cargar}
+        connection={connectionCaracteristicas}
+        token={token}
+      />
 
     </div>
 

@@ -65,13 +65,16 @@ function ConnectionManager({ token }) {
     if (!selectedQueryId || !sqlText.trim()) return;
 
     const esSelect = sqlText.trim().toUpperCase().startsWith("SELECT");
+    const nombreLocal = selectedConnection
+      ? `${selectedConnection.codLocal} — ${selectedConnection.name}`
+      : "el local conectado";
 
-    if (!esSelect) {
-      const ok = window.confirm(
-        "Esta query modificará datos reales en el local conectado. ¿Confirma ejecutarla?"
-      );
-      if (!ok) return;
-    }
+    const ok = window.confirm(
+      esSelect
+        ? `¿Confirma ejecutar esta consulta en ${nombreLocal}?`
+        : `Esta query modificará datos reales en ${nombreLocal}. ¿Confirma ejecutarla?`
+    );
+    if (!ok) return;
 
     setEjecutandoQuery(true);
     setResultadoQuery(null);
@@ -140,6 +143,10 @@ function ConnectionManager({ token }) {
   const selectedConnection = useMemo(() => {
     return connections.find(c => String(c.id) === String(selected)) || null;
   }, [connections, selected]);
+
+  const queryDescripcionActual = useMemo(() => {
+    return savedQueries.find(q => String(q.id) === String(selectedQueryId))?.descripcion || "";
+  }, [savedQueries, selectedQueryId]);
 
   useEffect(() => {
     cargarEmpresas();
@@ -289,8 +296,7 @@ function ConnectionManager({ token }) {
       <div className="d-flex gap-4 align-items-center flex-wrap">
         <label className="form-label fw-bold mb-0">Empresa:</label>
         <Select
-          className="flex-grow-1"
-          styles={{ container: base => ({ ...base, minWidth: 220 }) }}
+          styles={{ container: base => ({ ...base, width: 220, flex: "0 0 220px" }) }}
           value={empresas
             .map(emp => ({
               value: emp.id,
@@ -315,7 +321,7 @@ function ConnectionManager({ token }) {
           }}
         />
 
-        <Select className="flex-grow-1" styles={{ container: base => ({ ...base, minWidth: 320 }) }}
+        <Select styles={{ container: base => ({ ...base, flex: "1 1 0%", minWidth: 200 }) }}
           options={filteredConnections.map(c => ({
             value: c.id, label: `${c.codLocal ? `${c.codLocal} — ` : ""}${c.name} (${c.host})`
           }))}
@@ -492,9 +498,9 @@ function ConnectionManager({ token }) {
 
               {isAdminOnly && activeSubTab === "querys" && (
                 <div>
-                  <div className="row g-3 align-items-end mb-3">
-                    <div className="col-md-6">
-                      <label className="form-label fw-bold">Query guardada</label>
+                  <div className="d-flex align-items-center gap-2 mb-3">
+                    <label className="form-label fw-bold mb-0 text-nowrap">Query guardada:</label>
+                    <div style={{ minWidth: 280 }} className="flex-grow-1">
                       <Select
                         options={savedQueries.map(q => ({ value: q.id, label: q.nombre }))}
                         value={savedQueries
@@ -508,14 +514,17 @@ function ConnectionManager({ token }) {
 
                   {selectedQueryId && (
                     <>
+                      {queryDescripcionActual && (
+                        <div className="alert alert-secondary py-2 px-3 mb-3">
+                          {queryDescripcionActual}
+                        </div>
+                      )}
+
                       <div className="mb-3">
                         <label className="form-label fw-bold">SQL a ejecutar</label>
-                        <textarea
-                          className="form-control font-monospace"
-                          rows={6}
-                          value={sqlText}
-                          onChange={e => setSqlText(e.target.value)}
-                        />
+                        <pre className="bg-light border rounded p-2 mb-0" style={{ whiteSpace: "pre-wrap", maxHeight: 150, overflowY: "auto" }}>
+                          {sqlText}
+                        </pre>
                       </div>
 
                       <button
@@ -530,34 +539,14 @@ function ConnectionManager({ token }) {
                   )}
 
                   {errorQuery && (
-                    <div className="alert alert-danger mt-3 mb-0">{errorQuery}</div>
+                    <div className="alert alert-danger mt-3 mb-0">
+                      ❌ {errorQuery}
+                    </div>
                   )}
 
                   {resultadoQuery && (
-                    <div className="mt-3">
-                      <div className="alert alert-info mb-2">{resultadoQuery.message}</div>
-                      {Array.isArray(resultadoQuery.data) && resultadoQuery.data.length > 0 && (
-                        <div className="table-responsive" style={{ maxHeight: 300, overflowY: "auto" }}>
-                          <table className="table table-sm table-striped">
-                            <thead>
-                              <tr>
-                                {Object.keys(resultadoQuery.data[0]).map(col => (
-                                  <th key={col}>{col}</th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {resultadoQuery.data.map((fila, i) => (
-                                <tr key={i}>
-                                  {Object.keys(resultadoQuery.data[0]).map(col => (
-                                    <td key={col}>{String(fila[col])}</td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
+                    <div className="alert alert-success mt-3 mb-0">
+                      ✅ {resultadoQuery.message}
                     </div>
                   )}
                 </div>

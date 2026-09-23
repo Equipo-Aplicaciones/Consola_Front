@@ -71,8 +71,8 @@ function SavedQueries({ token }) {
             <table className="table table-hover table-sm mb-0">
               <thead className="sticky-top bg-white shadow-sm">
                 <tr className="table-secondary">
-                  <th>Nombre</th>
-                  <th>Descripción</th>
+                  <th style={{ width: "20%" }}>Nombre</th>
+                  <th style={{ width: "50%" }}>Descripción</th>
                   <th className="text-center">Estado</th>
                   <th className="text-center">Acciones</th>
                 </tr>
@@ -80,8 +80,10 @@ function SavedQueries({ token }) {
               <tbody>
                 {queries.map(query => (
                   <tr key={query.id}>
-                    <td>{query.nombre}</td>
-                    <td className="text-muted small">{query.descripcion}</td>
+                    <td className="text-nowrap fw-semibold">{query.nombre}</td>
+                    <td className="text-muted" style={{ whiteSpace: "pre-wrap" }}>
+                      {query.descripcion || <span className="fst-italic">Sin descripción</span>}
+                    </td>
                     <td className="text-center">
                       {query.activo ? (
                         <Badge bg="success">Activa</Badge>

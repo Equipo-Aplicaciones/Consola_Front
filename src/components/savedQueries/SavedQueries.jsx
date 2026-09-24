@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "react-bootstrap";
 import SavedQueryModal from "./SavedQueryModal";
+import SavedQueryRunsModal from "./SavedQueryRunsModal";
 import { API_BASE_URL } from "../../config";
 
 function SavedQueries({ token }) {
@@ -9,6 +10,8 @@ function SavedQueries({ token }) {
 
   const [showModal, setShowModal] = useState(false);
   const [editQuery, setEditQuery] = useState(null);
+  const [showRuns, setShowRuns] = useState(false);
+  const [runsQuery, setRunsQuery] = useState(null);
 
   const cargarQueries = useCallback(async () => {
     try {
@@ -103,6 +106,16 @@ function SavedQueries({ token }) {
                         ✏️
                       </button>
                       <button
+                        className="btn btn-sm btn-info me-1"
+                        title="Ver historial de ejecuciones"
+                        onClick={() => {
+                          setRunsQuery(query);
+                          setShowRuns(true);
+                        }}
+                      >
+                        📋
+                      </button>
+                      <button
                         className="btn btn-sm btn-danger"
                         title="Eliminar"
                         onClick={() => eliminar(query.id)}
@@ -123,6 +136,13 @@ function SavedQueries({ token }) {
         query={editQuery}
         onClose={() => setShowModal(false)}
         refresh={cargarQueries}
+        token={token}
+      />
+
+      <SavedQueryRunsModal
+        show={showRuns}
+        query={runsQuery}
+        onClose={() => setShowRuns(false)}
         token={token}
       />
     </div>

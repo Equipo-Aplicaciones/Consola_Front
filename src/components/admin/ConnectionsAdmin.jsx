@@ -359,17 +359,19 @@ function ConnectionsAdmin({ token }) {
             <i className="bi bi-search"></i>
           </button>
 
-          <button
-            type="button"
-            className="btn btn-success"
-            title="Agregar local"
-            onClick={() => {
-              setForm(emptyForm);
-              setShowFormMobile(true);
-            }}
-          >
-            <i className="bi bi-plus-lg"></i>
-          </button>
+          {!showSearchMobile && (
+            <button
+              type="button"
+              className="btn btn-success"
+              title="Agregar local"
+              onClick={() => {
+                setForm(emptyForm);
+                setShowFormMobile(true);
+              }}
+            >
+              <i className="bi bi-plus-lg"></i>
+            </button>
+          )}
         </div>
 
         <div className="d-none d-md-flex align-items-center gap-2 ms-md-auto flex-wrap">

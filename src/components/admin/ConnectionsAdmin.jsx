@@ -369,75 +369,77 @@ function ConnectionsAdmin({ token }) {
             }
           />
 
-          <select className="form-select" style={{ width: 120 }} value={filtros.empresa}
-            onChange={(e) =>
-              setFiltros(prev => ({
-                ...prev,
-                empresa: e.target.value
-              }))
-            } >
-            <option value="">Empresa</option>
-            {empresas.map(emp => (
-              <option key={emp.id} value={emp.id} >
-                {emp.nombre}
-              </option>
-            ))}
-          </select>
-
-          <select className="form-select" style={{ width: 120 }} value={filtros.razonSocial}
-            onChange={(e) =>
-              setFiltros(prev => ({
-                ...prev,
-                razonSocial: e.target.value
-              }))
-            } >
-            <option value="">Rut</option>
-
-            {[...new Set(data.map(x => x.razon_social))]
-              .filter(Boolean)
-              .sort()
-              .map(rs => (
-                <option key={rs} value={rs}>
-                  {rs}
+          <div className="d-none d-md-flex align-items-center gap-2">
+            <select className="form-select" style={{ width: 120 }} value={filtros.empresa}
+              onChange={(e) =>
+                setFiltros(prev => ({
+                  ...prev,
+                  empresa: e.target.value
+                }))
+              } >
+              <option value="">Empresa</option>
+              {empresas.map(emp => (
+                <option key={emp.id} value={emp.id} >
+                  {emp.nombre}
                 </option>
               ))}
-          </select>
+            </select>
 
-          <select className="form-select" style={{ width: 100 }} value={filtros.kiosko}
-            onChange={(e) =>
-              setFiltros(prev => ({
-                ...prev,
-                kiosko: e.target.value
-              }))
-            } >
-            <option value="">Kiosko</option>
-            <option value="true">Sí</option>
-            <option value="false">No</option>
-          </select>
+            <select className="form-select" style={{ width: 120 }} value={filtros.razonSocial}
+              onChange={(e) =>
+                setFiltros(prev => ({
+                  ...prev,
+                  razonSocial: e.target.value
+                }))
+              } >
+              <option value="">Rut</option>
 
-          <select className="form-select" style={{ width: 100 }} value={filtros.kds}
-            onChange={(e) =>
-              setFiltros(prev => ({
-                ...prev,
-                kds: e.target.value
-              }))
-            } >
-            <option value="">KDS</option>
-            <option value="true">Sí</option>
-            <option value="false">No</option>
-          </select>
+              {[...new Set(data.map(x => x.razon_social))]
+                .filter(Boolean)
+                .sort()
+                .map(rs => (
+                  <option key={rs} value={rs}>
+                    {rs}
+                  </option>
+                ))}
+            </select>
 
-          <button className="btn btn-outline-secondary" onClick={() =>
-              setFiltros({
-                texto: "",
-                empresa: "",
-                razonSocial: "",
-                kiosko: "",
-                kds: "",
-                llamador: "",
-                activo: ""
-              })
-            } > <i className="bi bi-arrow-clockwise"></i> </button>
+            <select className="form-select" style={{ width: 100 }} value={filtros.kiosko}
+              onChange={(e) =>
+                setFiltros(prev => ({
+                  ...prev,
+                  kiosko: e.target.value
+                }))
+              } >
+              <option value="">Kiosko</option>
+              <option value="true">Sí</option>
+              <option value="false">No</option>
+            </select>
+
+            <select className="form-select" style={{ width: 100 }} value={filtros.kds}
+              onChange={(e) =>
+                setFiltros(prev => ({
+                  ...prev,
+                  kds: e.target.value
+                }))
+              } >
+              <option value="">KDS</option>
+              <option value="true">Sí</option>
+              <option value="false">No</option>
+            </select>
+
+            <button className="btn btn-outline-secondary" onClick={() =>
+                setFiltros({
+                  texto: "",
+                  empresa: "",
+                  razonSocial: "",
+                  kiosko: "",
+                  kds: "",
+                  llamador: "",
+                  activo: ""
+                })
+              } > <i className="bi bi-arrow-clockwise"></i> </button>
+          </div>
 
         </div>
       </div>

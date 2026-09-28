@@ -37,6 +37,8 @@ function ConnectionsAdmin({ token }) {
   const [connectionCaracteristicas, setConnectionCaracteristicas] = useState(null);
   const [empresas, setEmpresas] = useState([]);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [showSearchMobile, setShowSearchMobile] = useState(false);
+  const [showFormMobile, setShowFormMobile] = useState(false);
     
   
   // 🔥 OPCIONES EMPRESA
@@ -152,6 +154,7 @@ function ConnectionsAdmin({ token }) {
       );
 
       setForm(emptyForm);
+      setShowFormMobile(false);
       cargar();
     } catch (err) {
       console.error(err);
@@ -161,6 +164,7 @@ function ConnectionsAdmin({ token }) {
 
   const editar = (row) => {
     setForm(row);
+    setShowFormMobile(true);
   };
 
   const eliminar = async (id) => {
@@ -328,9 +332,32 @@ function ConnectionsAdmin({ token }) {
       <div className="card-header d-flex align-items-center gap-2">
         <h5 className="mb-0 text-nowrap">Administrar Locales</h5>
 
-        <div className="d-flex align-items-center gap-2 ms-auto">
+        <div className="d-flex align-items-center gap-2 ms-auto d-md-none">
+          <button
+            type="button"
+            className="btn btn-outline-secondary"
+            title="Buscar"
+            onClick={() => setShowSearchMobile(v => !v)}
+          >
+            <i className="bi bi-search"></i>
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-success"
+            title="Agregar local"
+            onClick={() => {
+              setForm(emptyForm);
+              setShowFormMobile(true);
+            }}
+          >
+            <i className="bi bi-plus-lg"></i>
+          </button>
+        </div>
+
+        <div className="d-flex align-items-center gap-2 ms-md-auto flex-wrap">
           <input
-            className="form-control"
+            className={`form-control ${showSearchMobile ? "d-block" : "d-none d-md-block"}`}
             style={{ width: 150 }}
             placeholder="Buscar local..."
             value={filtros.texto}
@@ -415,7 +442,20 @@ function ConnectionsAdmin({ token }) {
         </div>
       </div>
 
-      <div className="card-body border-bottom">
+      <div className={`card-body border-bottom ${showFormMobile ? "" : "d-none d-md-block"}`}>
+        <div className="d-flex justify-content-end d-md-none mb-2">
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary"
+            onClick={() => {
+              setForm(emptyForm);
+              setShowFormMobile(false);
+            }}
+          >
+            <i className="bi bi-x-lg me-1"></i>
+            Cerrar
+          </button>
+        </div>
         <div className="row g-2">
 
           <div className="col-md-2">
@@ -604,8 +644,16 @@ function ConnectionsAdmin({ token }) {
                                 🗑️
                             </button>
                         </div>
-                        <MobileActions>
+                        <MobileActions
                             actions={[
+                                {
+                                label: "Ver Detalle",
+                                icon: "bi bi-eye",
+                                onClick: () => {
+                                  setSelectedId(row.id);
+                                  setShowDetalle(true);
+                                },
+                                },
                                 {
                                 label: "Editar",
                                 icon: "bi bi-pencil",
@@ -630,7 +678,7 @@ function ConnectionsAdmin({ token }) {
                                 onClick: () => eliminar(row.id),
                                 },
                             ]}
-                        </MobileActions>
+                        />
                     </div>
                 </td>
               </tr>

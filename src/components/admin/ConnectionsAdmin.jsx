@@ -329,13 +329,30 @@ function ConnectionsAdmin({ token }) {
 
   return (
     <div className="card shadow-sm">
+      {showSearchMobile && (
+        <div className="d-md-none p-2 border-bottom">
+          <input
+            className="form-control"
+            autoFocus
+            placeholder="Buscar local..."
+            value={filtros.texto}
+            onChange={(e) =>
+              setFiltros(prev => ({
+                ...prev,
+                texto: e.target.value
+              }))
+            }
+          />
+        </div>
+      )}
+
       <div className="card-header d-flex align-items-center gap-2">
         <h5 className="mb-0 text-nowrap">Administrar Locales</h5>
 
         <div className="d-flex align-items-center gap-2 ms-auto d-md-none">
           <button
             type="button"
-            className="btn btn-outline-secondary"
+            className={`btn ${showSearchMobile ? "btn-secondary" : "btn-outline-secondary"}`}
             title="Buscar"
             onClick={() => setShowSearchMobile(v => !v)}
           >
@@ -355,9 +372,9 @@ function ConnectionsAdmin({ token }) {
           </button>
         </div>
 
-        <div className="d-flex align-items-center gap-2 ms-md-auto flex-wrap">
+        <div className="d-none d-md-flex align-items-center gap-2 ms-md-auto flex-wrap">
           <input
-            className={`form-control ${showSearchMobile ? "d-block" : "d-none d-md-block"}`}
+            className="form-control"
             style={{ width: 150 }}
             placeholder="Buscar local..."
             value={filtros.texto}
@@ -369,7 +386,7 @@ function ConnectionsAdmin({ token }) {
             }
           />
 
-          <div className="d-none d-md-flex align-items-center gap-2">
+          <div className="d-flex align-items-center gap-2">
             <select className="form-select" style={{ width: 120 }} value={filtros.empresa}
               onChange={(e) =>
                 setFiltros(prev => ({

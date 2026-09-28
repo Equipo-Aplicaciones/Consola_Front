@@ -467,19 +467,6 @@ function ConnectionsAdmin({ token }) {
       </div>
 
       <div className={`card-body border-bottom ${showFormMobile ? "" : "d-none d-md-block"}`}>
-        <div className="d-flex justify-content-end d-md-none mb-2">
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary"
-            onClick={() => {
-              setForm(emptyForm);
-              setShowFormMobile(false);
-            }}
-          >
-            <i className="bi bi-x-lg me-1"></i>
-            Cerrar
-          </button>
-        </div>
         <div className="row g-2">
 
           <div className="col-md-2">
@@ -583,7 +570,10 @@ function ConnectionsAdmin({ token }) {
             </button>
 
             <button className="btn btn-secondary" style={{ minWidth: 120 }}
-              onClick={() => setForm(emptyForm)}>
+              onClick={() => {
+                setForm(emptyForm);
+                setShowFormMobile(false);
+              }}>
               Limpiar
             </button>
           </div>

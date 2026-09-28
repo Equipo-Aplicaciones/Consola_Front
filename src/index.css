@@ -187,22 +187,12 @@ h2 {
   }
 
   .mobile-dropdown {
-    position: absolute;
-    right: 0;
     min-width: 180px;
     background: white;
     border-radius: 10px;
     border: 1px solid #ddd;
     z-index: 9999;
     overflow: hidden;
-  }
-
-  .mobile-dropdown.down {
-    top: 40px;
-  }
-
-  .mobile-dropdown.up {
-    bottom: 40px;
   }
 
   .dropdown-item-action {

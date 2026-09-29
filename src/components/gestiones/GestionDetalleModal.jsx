@@ -26,6 +26,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   });
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [errorEdicion, setErrorEdicion] = useState("");
+  const [campoEnfocado, setCampoEnfocado] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
   const role = user.role;
@@ -103,6 +104,40 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
     cargarEstados();
     cargarGestion();
   }, [show, cargarEstados, cargarGestion]);
+
+  // Auto-refresh: puede haber más de una persona viendo/editando la misma
+  // gestión al mismo tiempo. Se refresca cada 15s mientras el modal está
+  // abierto, pero se salta el refresco si hay algo "en vuelo" (edición de
+  // cabecera, un comentario con foco, guardado de un local o masivo, o una
+  // acción como suspender/finalizar) para no pisar lo que la persona está
+  // escribiendo o haciendo en ese momento.
+  useEffect(() => {
+    if (!show) return;
+
+    const intervalo = setInterval(() => {
+      if (
+        editando ||
+        campoEnfocado ||
+        guardandoLocal !== null ||
+        guardandoMasivo ||
+        accionando
+      ) {
+        return;
+      }
+
+      cargarGestion();
+    }, 15000);
+
+    return () => clearInterval(intervalo);
+  }, [
+    show,
+    editando,
+    campoEnfocado,
+    guardandoLocal,
+    guardandoMasivo,
+    accionando,
+    cargarGestion
+  ]);
 
   const resumen = useMemo(() => {
     const locales = gestion?.locales || [];
@@ -1139,7 +1174,10 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                                   }
                                 )
                               }
+                              onFocus={() => setCampoEnfocado(true)}
                               onBlur={() => {
+                                setCampoEnfocado(false);
+
                                 if (
                                   !gestionBloqueada &&
                                   !guardando

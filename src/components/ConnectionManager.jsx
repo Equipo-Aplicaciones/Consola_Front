@@ -512,7 +512,7 @@ function ConnectionManager({ token }) {
                 <div>
                   <div className="d-flex align-items-center gap-2 mb-3">
                     <label className="form-label fw-bold mb-0 text-nowrap">Query guardada:</label>
-                    <div style={{ minWidth: 280 }} className="flex-grow-1">
+                    <div style={{ minWidth: 0 }} className="flex-grow-1">
                       <Select
                         options={savedQueries.map(q => ({ value: q.id, label: q.nombre }))}
                         value={savedQueries

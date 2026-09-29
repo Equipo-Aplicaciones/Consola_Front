@@ -306,7 +306,7 @@ function ConnectionManager({ token }) {
         <Select
           styles={{ container: base => (
             isMobile
-              ? { ...base, width: "100%", flex: "1 1 100%" }
+              ? { ...base, flex: "1 1 0%", minWidth: 0 }
               : { ...base, width: 220, flex: "0 0 220px" }
           ) }}
           value={empresas

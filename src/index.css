@@ -176,6 +176,11 @@ h2 {
 
 /* 🔥 MOBILE */
 @media (max-width: 768px) {
+  .main-content {
+    width: 96%;
+    padding: 12px;
+  }
+
   .btn-action {
     width: 36px;
     height: 36px;

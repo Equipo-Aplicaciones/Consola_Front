@@ -495,24 +495,47 @@ function ConnectionsAdmin({ token }) {
           </div>
 
           <div className="col-12 col-md-2">
-            <select className="form-select" value={`${form.rut}|${form.razon_social}`} onChange={(e) => {
-                const [rut, razon_social] = e.target.value.split("|");
+            <Select
+              placeholder="Seleccione Rut"
+              isClearable
+              value={
+                form.rut
+                  ? {
+                      value: `${form.rut}|${form.razon_social}`,
+                      label: `${form.rut} - ${form.razon_social}`
+                    }
+                  : null
+              }
+              options={empresasOptions.map(empresa => ({
+                value: `${empresa.rut}|${empresa.razon_social}`,
+                label: `${empresa.rut} - ${empresa.razon_social}`
+              }))}
+              menuPortalTarget={document.body}
+              menuPosition="fixed"
+              styles={{
+                menuPortal: base => ({
+                  ...base,
+                  zIndex: 9999
+                })
+              }}
+              onChange={(opt) => {
+                if (!opt) {
+                  setForm(prev => ({
+                    ...prev,
+                    rut: "",
+                    razon_social: ""
+                  }));
+                  return;
+                }
+
+                const [rut, razon_social] = opt.value.split("|");
                 setForm(prev => ({
                   ...prev,
                   rut,
                   razon_social
                 }));
               }}
-            >
-              <option value=""> Seleccione Rut </option>
-              {empresasOptions.map((empresa, index) => (
-                <option key={index} value={`${empresa.rut}|${empresa.razon_social}`} >
-
-                  {empresa.rut} {" - "}  {empresa.razon_social}
-
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           <div className="col-12">

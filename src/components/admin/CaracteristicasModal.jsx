@@ -149,9 +149,9 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
   }
 
   return (
-    <Modal show={show} onHide={onClose} size="lg" centered>
-      <Modal.Header closeButton>
-        <Modal.Title>
+    <Modal show={show} onHide={onClose} size="lg" centered scrollable>
+      <Modal.Header closeButton className="py-2">
+        <Modal.Title className="fs-6">
           Características — {connection?.name}
         </Modal.Title>
       </Modal.Header>
@@ -213,15 +213,16 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
           {sugerencias.claves.map(c => <option key={c} value={c} />)}
         </datalist>
 
-        <p className="text-muted small">
+        <p className="text-muted mb-2" style={{ fontSize: "0.8rem" }}>
           Agrupa los datos por categoría (ej: PC1, PC2, Impresoras) — dentro de cada
           una defines los pares que necesites, sin campos fijos.
         </p>
 
         {categorias.map((cat, catIndex) => (
-          <div key={catIndex} className="border rounded p-3 mb-3">
+          <div key={catIndex} className="border rounded p-2 p-md-3 mb-2">
             <div className="d-flex align-items-center gap-2 mb-2">
               <Form.Control
+                size="sm"
                 className="fw-bold"
                 placeholder="Nombre de la categoría (ej: PC1)"
                 value={cat.nombre}
@@ -239,9 +240,10 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
             </div>
 
             {cat.pares.map((par, parIndex) => (
-              <Row key={parIndex} className="g-2 mb-2 align-items-center">
-                <Col md={4}>
+              <Row key={parIndex} className="gx-2 gy-1 mb-1 align-items-center">
+                <Col xs={5} md={4}>
                   <Form.Control
+                    size="sm"
                     placeholder="Ej: RAM"
                     value={par.key}
                     onChange={e =>
@@ -250,8 +252,9 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
                     list="sugerencias-claves"
                   />
                 </Col>
-                <Col md={7}>
+                <Col xs={6} md={7}>
                   <Form.Control
+                    size="sm"
                     placeholder="Ej: 16GB"
                     value={par.value}
                     onChange={e =>
@@ -259,7 +262,7 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
                     }
                   />
                 </Col>
-                <Col md={1}>
+                <Col xs={1} md={1} className="ps-0">
                   <Button
                     variant="link"
                     className="text-danger p-0"
@@ -288,18 +291,18 @@ export default function CaracteristicasModal({ show, onClose, refresh, connectio
         </>
         )}
       </Modal.Body>
-      <Modal.Footer>
+      <Modal.Footer className="py-2">
         {modoEdicion ? (
           <>
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" size="sm" onClick={onClose}>
               Cancelar
             </Button>
-            <Button onClick={guardar}>
+            <Button size="sm" onClick={guardar}>
               Guardar
             </Button>
           </>
         ) : (
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" size="sm" onClick={onClose}>
             Cerrar
           </Button>
         )}

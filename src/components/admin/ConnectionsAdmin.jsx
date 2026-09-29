@@ -37,6 +37,8 @@ function ConnectionsAdmin({ token }) {
   const [connectionCaracteristicas, setConnectionCaracteristicas] = useState(null);
   const [empresas, setEmpresas] = useState([]);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [showSearchMobile, setShowSearchMobile] = useState(false);
+  const [showFormMobile, setShowFormMobile] = useState(false);
     
   
   // 🔥 OPCIONES EMPRESA
@@ -152,6 +154,7 @@ function ConnectionsAdmin({ token }) {
       );
 
       setForm(emptyForm);
+      setShowFormMobile(false);
       cargar();
     } catch (err) {
       console.error(err);
@@ -161,6 +164,7 @@ function ConnectionsAdmin({ token }) {
 
   const editar = (row) => {
     setForm(row);
+    setShowFormMobile(true);
   };
 
   const eliminar = async (id) => {
@@ -325,10 +329,55 @@ function ConnectionsAdmin({ token }) {
 
   return (
     <div className="card shadow-sm">
-      <div className="card-header d-flex align-items-center gap-2">
+      <div className="card-header d-flex align-items-center gap-2 position-relative">
+        {showSearchMobile && (
+          <div
+            className="d-md-none position-absolute top-0 start-0 h-100 bg-white d-flex align-items-center"
+            style={{ right: 0, paddingLeft: 12, paddingRight: 60, zIndex: 2 }}
+          >
+            <input
+              className="form-control"
+              autoFocus
+              placeholder="Buscar local..."
+              value={filtros.texto}
+              onChange={(e) =>
+                setFiltros(prev => ({
+                  ...prev,
+                  texto: e.target.value
+                }))
+              }
+            />
+          </div>
+        )}
+
         <h5 className="mb-0 text-nowrap">Administrar Locales</h5>
 
-        <div className="d-flex align-items-center gap-2 ms-auto">
+        <div className="d-flex align-items-center gap-2 ms-auto d-md-none" style={{ position: "relative", zIndex: 3 }}>
+          <button
+            type="button"
+            className={`btn ${showSearchMobile ? "btn-secondary" : "btn-outline-secondary"}`}
+            title="Buscar"
+            onClick={() => setShowSearchMobile(v => !v)}
+          >
+            <i className="bi bi-search"></i>
+          </button>
+
+          {!showSearchMobile && (
+            <button
+              type="button"
+              className="btn btn-success"
+              title="Agregar local"
+              onClick={() => {
+                setForm(emptyForm);
+                setShowFormMobile(true);
+              }}
+            >
+              <i className="bi bi-plus-lg"></i>
+            </button>
+          )}
+        </div>
+
+        <div className="d-none d-md-flex align-items-center gap-2 ms-md-auto flex-wrap">
           <input
             className="form-control"
             style={{ width: 150 }}
@@ -342,80 +391,82 @@ function ConnectionsAdmin({ token }) {
             }
           />
 
-          <select className="form-select" style={{ width: 120 }} value={filtros.empresa}
-            onChange={(e) =>
-              setFiltros(prev => ({
-                ...prev,
-                empresa: e.target.value
-              }))
-            } >
-            <option value="">Empresa</option>
-            {empresas.map(emp => (
-              <option key={emp.id} value={emp.id} >
-                {emp.nombre}
-              </option>
-            ))}
-          </select>
-
-          <select className="form-select" style={{ width: 120 }} value={filtros.razonSocial}
-            onChange={(e) =>
-              setFiltros(prev => ({
-                ...prev,
-                razonSocial: e.target.value
-              }))
-            } >
-            <option value="">Rut</option>
-
-            {[...new Set(data.map(x => x.razon_social))]
-              .filter(Boolean)
-              .sort()
-              .map(rs => (
-                <option key={rs} value={rs}>
-                  {rs}
+          <div className="d-flex align-items-center gap-2">
+            <select className="form-select" style={{ width: 120 }} value={filtros.empresa}
+              onChange={(e) =>
+                setFiltros(prev => ({
+                  ...prev,
+                  empresa: e.target.value
+                }))
+              } >
+              <option value="">Empresa</option>
+              {empresas.map(emp => (
+                <option key={emp.id} value={emp.id} >
+                  {emp.nombre}
                 </option>
               ))}
-          </select>
+            </select>
 
-          <select className="form-select" style={{ width: 100 }} value={filtros.kiosko}
-            onChange={(e) =>
-              setFiltros(prev => ({
-                ...prev,
-                kiosko: e.target.value
-              }))
-            } >
-            <option value="">Kiosko</option>
-            <option value="true">Sí</option>
-            <option value="false">No</option>
-          </select>
+            <select className="form-select" style={{ width: 120 }} value={filtros.razonSocial}
+              onChange={(e) =>
+                setFiltros(prev => ({
+                  ...prev,
+                  razonSocial: e.target.value
+                }))
+              } >
+              <option value="">Rut</option>
 
-          <select className="form-select" style={{ width: 100 }} value={filtros.kds}
-            onChange={(e) =>
-              setFiltros(prev => ({
-                ...prev,
-                kds: e.target.value
-              }))
-            } >
-            <option value="">KDS</option>
-            <option value="true">Sí</option>
-            <option value="false">No</option>
-          </select>
+              {[...new Set(data.map(x => x.razon_social))]
+                .filter(Boolean)
+                .sort()
+                .map(rs => (
+                  <option key={rs} value={rs}>
+                    {rs}
+                  </option>
+                ))}
+            </select>
 
-          <button className="btn btn-outline-secondary" onClick={() =>
-              setFiltros({
-                texto: "",
-                empresa: "",
-                razonSocial: "",
-                kiosko: "",
-                kds: "",
-                llamador: "",
-                activo: ""
-              })
-            } > <i className="bi bi-arrow-clockwise"></i> </button>
+            <select className="form-select" style={{ width: 100 }} value={filtros.kiosko}
+              onChange={(e) =>
+                setFiltros(prev => ({
+                  ...prev,
+                  kiosko: e.target.value
+                }))
+              } >
+              <option value="">Kiosko</option>
+              <option value="true">Sí</option>
+              <option value="false">No</option>
+            </select>
+
+            <select className="form-select" style={{ width: 100 }} value={filtros.kds}
+              onChange={(e) =>
+                setFiltros(prev => ({
+                  ...prev,
+                  kds: e.target.value
+                }))
+              } >
+              <option value="">KDS</option>
+              <option value="true">Sí</option>
+              <option value="false">No</option>
+            </select>
+
+            <button className="btn btn-outline-secondary" onClick={() =>
+                setFiltros({
+                  texto: "",
+                  empresa: "",
+                  razonSocial: "",
+                  kiosko: "",
+                  kds: "",
+                  llamador: "",
+                  activo: ""
+                })
+              } > <i className="bi bi-arrow-clockwise"></i> </button>
+          </div>
 
         </div>
       </div>
 
-      <div className="card-body border-bottom">
+      <div className={`card-body border-bottom ${showFormMobile ? "" : "d-none d-md-block"}`}>
         <div className="row g-2">
 
           <div className="col-md-2">
@@ -519,7 +570,10 @@ function ConnectionsAdmin({ token }) {
             </button>
 
             <button className="btn btn-secondary" style={{ minWidth: 120 }}
-              onClick={() => setForm(emptyForm)}>
+              onClick={() => {
+                setForm(emptyForm);
+                setShowFormMobile(false);
+              }}>
               Limpiar
             </button>
           </div>
@@ -604,8 +658,16 @@ function ConnectionsAdmin({ token }) {
                                 🗑️
                             </button>
                         </div>
-                        <MobileActions>
+                        <MobileActions
                             actions={[
+                                {
+                                label: "Ver Detalle",
+                                icon: "bi bi-eye",
+                                onClick: () => {
+                                  setSelectedId(row.id);
+                                  setShowDetalle(true);
+                                },
+                                },
                                 {
                                 label: "Editar",
                                 icon: "bi bi-pencil",
@@ -630,7 +692,7 @@ function ConnectionsAdmin({ token }) {
                                 onClick: () => eliminar(row.id),
                                 },
                             ]}
-                        </MobileActions>
+                        />
                     </div>
                 </td>
               </tr>

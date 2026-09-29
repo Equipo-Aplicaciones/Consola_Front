@@ -8,6 +8,7 @@ export default function GestionesPage({ token }) {
   const [estados, setEstados] = useState([]);
   const [empresas, setEmpresas] = useState([]);
   const [search, setSearch] = useState("");
+  const [showSearchMobile, setShowSearchMobile] = useState(false);
   const [estado, setEstado] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [loading, setLoading] = useState(true);
@@ -420,7 +421,75 @@ export default function GestionesPage({ token }) {
               FILTROS
           ========================= */}
 
-          <div className="row g-2 mb-2">
+          {/* Móvil: buscador colapsable + empresa/estado en una sola línea */}
+          <div className="d-flex d-md-none align-items-center gap-2 mb-2">
+            {!showSearchMobile ? (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary flex-shrink-0"
+                  title="Buscar"
+                  onClick={() => setShowSearchMobile(true)}
+                >
+                  <i className="bi bi-search" />
+                </button>
+
+                <select
+                  className="form-select flex-grow-1"
+                  style={{ minWidth: 0 }}
+                  value={empresa}
+                  onChange={e => setEmpresa(e.target.value)}
+                >
+                  <option value="">Todas las empresas</option>
+                  {empresas.map(item => (
+                    <option key={item.id} value={item.id}>
+                      {item.nombre}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  className="form-select flex-grow-1"
+                  style={{ minWidth: 0 }}
+                  value={estado}
+                  onChange={e => setEstado(e.target.value)}
+                >
+                  <option value="">Todos los estados</option>
+                  {estados.map(item => (
+                    <option key={item.id} value={item.codigo}>
+                      {item.nombre}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <div className="input-group">
+                <span className="input-group-text">
+                  <i className="bi bi-search" />
+                </span>
+
+                <input
+                  type="text"
+                  className="form-control"
+                  autoFocus
+                  placeholder="Buscar gestión, versión o descripción..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setShowSearchMobile(false)}
+                >
+                  <i className="bi bi-x-lg" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop: layout original */}
+          <div className="row g-2 mb-2 d-none d-md-flex">
 
             <div className="col-12 col-lg-6">
               <div className="input-group">

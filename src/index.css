@@ -187,6 +187,17 @@ h2 {
     padding: 0;
   }
 
+  .connection-subtabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .connection-subtabs .nav-link {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
   .btn-action span {
     display: none !important;
   }

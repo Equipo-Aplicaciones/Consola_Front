@@ -165,7 +165,7 @@ function QueryExecutor({ token }) {
           )}
         </div>
 
-        <button className="btn btn-outline-primary w-100 w-md-auto"
+        <button className="btn btn-outline-primary align-self-stretch align-self-md-auto"
             onClick={loadArticulos}
             disabled={connectionStatus !== "OK" || loading} >
           {loading ? "Cargando..." : connectionStatus === "OK" ? "Cargar Artículos" : "Conexión no establecida"}

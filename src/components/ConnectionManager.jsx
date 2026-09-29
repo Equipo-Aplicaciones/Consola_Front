@@ -4,6 +4,14 @@ import { apiFetch } from "./utils/api";
 import Select from "react-select";
 
 function ConnectionManager({ token }) {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   const [connections, setConnections] = useState([]);
   const [selected, setSelected] = useState("");
   const [message, setMessage] = useState("");
@@ -290,13 +298,17 @@ function ConnectionManager({ token }) {
   }, [message]);
 
   return (
-    <div className="card p-4 shadow-sm">
-      <h4 className="mb-3">Gestión de Conexiones</h4>
+    <div className="card p-3 p-md-4 shadow-sm">
+      <h5 className="mb-3">Gestión de Conexiones</h5>
 
-      <div className="d-flex gap-4 align-items-center flex-wrap">
+      <div className="d-flex gap-2 gap-md-4 align-items-center flex-wrap">
         <label className="form-label fw-bold mb-0">Empresa:</label>
         <Select
-          styles={{ container: base => ({ ...base, width: 220, flex: "0 0 220px" }) }}
+          styles={{ container: base => (
+            isMobile
+              ? { ...base, width: "100%", flex: "1 1 100%" }
+              : { ...base, width: 220, flex: "0 0 220px" }
+          ) }}
           value={empresas
             .map(emp => ({
               value: emp.id,
@@ -321,7 +333,11 @@ function ConnectionManager({ token }) {
           }}
         />
 
-        <Select styles={{ container: base => ({ ...base, flex: "1 1 0%", minWidth: 200 }) }}
+        <Select styles={{ container: base => (
+            isMobile
+              ? { ...base, width: "100%", flex: "1 1 100%" }
+              : { ...base, flex: "1 1 0%", minWidth: 200 }
+          ) }}
           options={filteredConnections.map(c => ({
             value: c.id, label: `${c.codLocal ? `${c.codLocal} — ` : ""}${c.name} (${c.host})`
           }))}
@@ -357,15 +373,11 @@ function ConnectionManager({ token }) {
         </div>
       )}
 
-      {isAdmin && (
+      {isAdmin && selected && String(connectedId) === String(selected) && (
         <>
           <hr className="my-3" />
 
-          {!selected || String(connectedId) !== String(selected) ? (
-            <div className="alert alert-secondary mb-0 p-1 px-2">
-              Seleccione un local para consultar un vendedor{isAdminOnly ? " o ejecutar una query" : ""}.
-            </div>
-          ) : (
+          {(
             <>
               {isAdminOnly && (
                 <ul className="nav nav-tabs mb-3">

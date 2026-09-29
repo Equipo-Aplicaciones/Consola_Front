@@ -154,10 +154,10 @@ function QueryExecutor({ token }) {
   };
 
   return (
-    <div className="card p-4 shadow-sm mt-4">
-      <div className="d-flex justify-content-between align-items-center mb-3">
+    <div className="card p-3 p-md-4 shadow-sm mt-4">
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-3">
         <div>
-          <h4 className="mb-0">Artículos (KIOSKO)</h4>
+          <h5 className="mb-0">Artículos (KIOSKO)</h5>
           {connectionName && (
             <small className="text-muted d-block">
               Conexión activa: <strong>{connectionName}</strong>
@@ -165,7 +165,7 @@ function QueryExecutor({ token }) {
           )}
         </div>
 
-        <button className="btn btn-outline-primary me-2 "
+        <button className="btn btn-outline-primary w-100 w-md-auto"
             onClick={loadArticulos}
             disabled={connectionStatus !== "OK" || loading} >
           {loading ? "Cargando..." : connectionStatus === "OK" ? "Cargar Artículos" : "Conexión no establecida"}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Modal, Button } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 import GestionModal from "./GestionModal";
 import GestionDetalleModal from "./GestionDetalleModal";
@@ -8,7 +9,7 @@ export default function GestionesPage({ token }) {
   const [estados, setEstados] = useState([]);
   const [empresas, setEmpresas] = useState([]);
   const [search, setSearch] = useState("");
-  const [showSearchMobile, setShowSearchMobile] = useState(false);
+  const [showFiltrosMobile, setShowFiltrosMobile] = useState(false);
   const [estado, setEstado] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [loading, setLoading] = useState(true);
@@ -246,6 +247,12 @@ export default function GestionesPage({ token }) {
     [gestiones]
   );
 
+  const filtrosActivos = useMemo(
+    () =>
+      [search.trim(), empresa, estado].filter(Boolean).length,
+    [search, empresa, estado]
+  );
+
   // Las finalizadas solo se muestran si el filtro de estado las pidió
   // explícitamente; con "Todos los estados" u otro estado puntual, quedan
   // afuera para no ensuciar el listado.
@@ -421,71 +428,21 @@ export default function GestionesPage({ token }) {
               FILTROS
           ========================= */}
 
-          {/* Móvil: buscador colapsable + empresa/estado en una sola línea */}
-          <div className="d-flex d-md-none align-items-center gap-2 mb-2">
-            {!showSearchMobile ? (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary flex-shrink-0"
-                  title="Buscar"
-                  onClick={() => setShowSearchMobile(true)}
-                >
-                  <i className="bi bi-search" />
-                </button>
-
-                <select
-                  className="form-select flex-grow-1"
-                  style={{ minWidth: 0 }}
-                  value={empresa}
-                  onChange={e => setEmpresa(e.target.value)}
-                >
-                  <option value="">Todas las empresas</option>
-                  {empresas.map(item => (
-                    <option key={item.id} value={item.id}>
-                      {item.nombre}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="form-select flex-grow-1"
-                  style={{ minWidth: 0 }}
-                  value={estado}
-                  onChange={e => setEstado(e.target.value)}
-                >
-                  <option value="">Todos los estados</option>
-                  {estados.map(item => (
-                    <option key={item.id} value={item.codigo}>
-                      {item.nombre}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : (
-              <div className="input-group">
-                <span className="input-group-text">
-                  <i className="bi bi-search" />
+          {/* Móvil: un solo botón que abre un modal con todos los filtros */}
+          <div className="d-flex d-md-none mb-2">
+            <button
+              type="button"
+              className="btn btn-outline-secondary d-flex align-items-center gap-2"
+              onClick={() => setShowFiltrosMobile(true)}
+            >
+              <i className="bi bi-funnel" />
+              Filtros
+              {filtrosActivos > 0 && (
+                <span className="badge rounded-pill bg-primary">
+                  {filtrosActivos}
                 </span>
-
-                <input
-                  type="text"
-                  className="form-control"
-                  autoFocus
-                  placeholder="Buscar gestión, versión o descripción..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                />
-
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary"
-                  onClick={() => setShowSearchMobile(false)}
-                >
-                  <i className="bi bi-x-lg" />
-                </button>
-              </div>
-            )}
+              )}
+            </button>
           </div>
 
           {/* Desktop: layout original */}
@@ -753,6 +710,75 @@ export default function GestionesPage({ token }) {
 
         </div>
       </div>
+
+      {/* =========================
+          FILTROS (MÓVIL)
+      ========================= */}
+
+      <Modal
+        show={showFiltrosMobile}
+        onHide={() => setShowFiltrosMobile(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title className="fs-6">Filtros</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="input-group mb-3">
+            <span className="input-group-text">
+              <i className="bi bi-search" />
+            </span>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Buscar gestión, versión o descripción..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+
+          <select
+            className="form-select mb-3"
+            value={empresa}
+            onChange={e => setEmpresa(e.target.value)}
+          >
+            <option value="">Todas las empresas</option>
+            {empresas.map(item => (
+              <option key={item.id} value={item.id}>
+                {item.nombre}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="form-select"
+            value={estado}
+            onChange={e => setEstado(e.target.value)}
+          >
+            <option value="">Todos los estados</option>
+            {estados.map(item => (
+              <option key={item.id} value={item.codigo}>
+                {item.nombre}
+              </option>
+            ))}
+          </select>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="outline-secondary"
+            onClick={() => {
+              setSearch("");
+              setEmpresa("");
+              setEstado("");
+            }}
+          >
+            Limpiar filtros
+          </Button>
+          <Button onClick={() => setShowFiltrosMobile(false)}>
+            Cerrar
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* =========================
           NUEVA GESTIÓN

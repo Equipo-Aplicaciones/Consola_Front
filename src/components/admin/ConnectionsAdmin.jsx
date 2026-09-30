@@ -57,7 +57,8 @@ function ConnectionsAdmin({ token }) {
     kiosko: "",
     kds: "",
     llamador: "",
-    activo: ""
+    activo: "",
+    caracteristicas: ""
   });
 
   const headers = {
@@ -242,13 +243,34 @@ function ConnectionsAdmin({ token }) {
         item.activo ===
           (filtros.activo === "true");
 
+      const cumpleCaracteristicas =
+        !filtros.caracteristicas ||
+        Object.entries(item.caracteristicas || {}).some(
+          ([categoria, campos]) =>
+            categoria
+              .toLowerCase()
+              .includes(filtros.caracteristicas.toLowerCase()) ||
+
+            Object.entries(campos || {}).some(
+              ([clave, valor]) =>
+                clave
+                  .toLowerCase()
+                  .includes(filtros.caracteristicas.toLowerCase()) ||
+
+                String(valor)
+                  .toLowerCase()
+                  .includes(filtros.caracteristicas.toLowerCase())
+            )
+        );
+
       return (
         cumpleTexto &&
         cumpleEmpresa &&
         cumpleRazonSocial &&
         cumpleKiosko &&
         cumpleKds &&
-        cumpleActivo
+        cumpleActivo &&
+        cumpleCaracteristicas
       );
     });
 
@@ -450,6 +472,19 @@ function ConnectionsAdmin({ token }) {
               <option value="false">No</option>
             </select>
 
+            <input
+              className="form-control"
+              style={{ width: 160 }}
+              placeholder="Características..."
+              value={filtros.caracteristicas}
+              onChange={(e) =>
+                setFiltros(prev => ({
+                  ...prev,
+                  caracteristicas: e.target.value
+                }))
+              }
+            />
+
             <button className="btn btn-outline-secondary" onClick={() =>
                 setFiltros({
                   texto: "",
@@ -458,7 +493,8 @@ function ConnectionsAdmin({ token }) {
                   kiosko: "",
                   kds: "",
                   llamador: "",
-                  activo: ""
+                  activo: "",
+                  caracteristicas: ""
                 })
               } > <i className="bi bi-arrow-clockwise"></i> </button>
           </div>

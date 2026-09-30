@@ -210,17 +210,6 @@ export default function GestionesPage({ token }) {
     cargarGestiones
   ]);
 
-  // Auto-refresh: varias personas pueden estar trabajando en gestiones al
-  // mismo tiempo, así que el listado se refresca solo cada 20s para que el
-  // avance/estado no quede desactualizado sin recargar la página a mano.
-  useEffect(() => {
-    const intervalo = setInterval(() => {
-      cargarGestiones();
-    }, 20000);
-
-    return () => clearInterval(intervalo);
-  }, [cargarGestiones]);
-
   /* =====================================================
      RESUMEN
      Solo Admin y N2
@@ -823,11 +812,10 @@ export default function GestionesPage({ token }) {
         token={token}
         empresas={empresas}
         refresh={cargarGestiones}
-        onClose={() =>
-          setGestionSeleccionada(
-            null
-          )
-        }
+        onClose={() => {
+          setGestionSeleccionada(null);
+          cargarGestiones();
+        }}
       />
 
     </div>

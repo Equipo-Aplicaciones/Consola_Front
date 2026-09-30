@@ -16,16 +16,26 @@ function describirLog(l) {
     return `Cambió el horario base de ${local} (${l.campo}): "${l.valor_anterior}" → "${l.valor_nuevo}".`;
   }
 
-  if (l.campo === "alta_local") {
-    return `Creó el local ${l.valor_nuevo}.`;
+  if (l.entidad === "menu_local" && l.campo === "menuCritico") {
+    return `Cambió "Menú Crítico" de ${local} a ${l.valor_nuevo === "true" ? "Sí" : "No"}.`;
   }
 
-  if (l.campo === "baja_local") {
-    return `Eliminó el local ${l.valor_anterior}.`;
-  }
+  if (l.entidad === "articulo") {
+    const articulo = l.articulo_nombre
+      ? `${l.articulo_codigo ? `${l.articulo_codigo} - ` : ""}${l.articulo_nombre}`
+      : `artículo #${l.entidad_id}`;
 
-  if (l.campo === "activo") {
-    return `Cambió el estado de ${local} a ${l.valor_nuevo === "true" ? "Activo" : "Inactivo"}.`;
+    if (l.campo === "CREATED") {
+      return `Creó el artículo ${articulo}.`;
+    }
+    if (l.campo === "DELETED") {
+      return `Eliminó el artículo ${articulo}.`;
+    }
+    if (l.campo === "UDTATE_ACTIVO") {
+      return `Cambió el estado del artículo ${articulo} a ${l.valor_nuevo === "true" ? "Activo" : "Inactivo"}.`;
+    }
+
+    return `Cambió el campo "${l.campo}" del artículo ${articulo}: "${l.valor_anterior ?? "-"}" → "${l.valor_nuevo ?? "-"}".`;
   }
 
   return `Cambió el campo "${l.campo}" de ${local}: "${l.valor_anterior ?? "-"}" → "${l.valor_nuevo ?? "-"}".`;

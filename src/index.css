@@ -176,10 +176,26 @@ h2 {
 
 /* 🔥 MOBILE */
 @media (max-width: 768px) {
+  .main-content {
+    width: 96%;
+    padding: 12px;
+  }
+
   .btn-action {
     width: 36px;
     height: 36px;
     padding: 0;
+  }
+
+  .connection-subtabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .connection-subtabs .nav-link {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
   }
 
   .btn-action span {
@@ -187,22 +203,12 @@ h2 {
   }
 
   .mobile-dropdown {
-    position: absolute;
-    right: 0;
     min-width: 180px;
     background: white;
     border-radius: 10px;
     border: 1px solid #ddd;
     z-index: 9999;
     overflow: hidden;
-  }
-
-  .mobile-dropdown.down {
-    top: 40px;
-  }
-
-  .mobile-dropdown.up {
-    bottom: 40px;
   }
 
   .dropdown-item-action {

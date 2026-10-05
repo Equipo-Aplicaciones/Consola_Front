@@ -3,7 +3,8 @@ import { Badge, Button, Form, Modal, Spinner } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const FORM_VACIO = { titulo: "", categoria: "", descripcion: "" };
+const ROLES = ["Admin", "N1", "N2", "Gerente", "RRHH", "Comercial", "Zonal"];
+const FORM_VACIO = { titulo: "", categoria: "", descripcion: "", roles: [] };
 
 function formatoTamano(bytes) {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -107,11 +108,21 @@ export default function AyudaPage({ token, role }) {
         ? {
             titulo: documento.titulo,
             categoria: documento.categoria || "",
-            descripcion: documento.descripcion || ""
+            descripcion: documento.descripcion || "",
+            roles: documento.roles_visibles || []
           }
         : FORM_VACIO
     );
     setFormulario(documento || {});
+  };
+
+  const alternarRol = (rol) => {
+    setForm((prev) => ({
+      ...prev,
+      roles: prev.roles.includes(rol)
+        ? prev.roles.filter((r) => r !== rol)
+        : [...prev.roles, rol]
+    }));
   };
 
   const elegirArchivo = (e) => {
@@ -169,6 +180,7 @@ export default function AyudaPage({ token, role }) {
         datos.append("titulo", form.titulo);
         datos.append("categoria", form.categoria);
         datos.append("descripcion", form.descripcion);
+        datos.append("roles", JSON.stringify(form.roles));
         datos.append("file", archivo);
 
         res = await fetch(base, { method: "POST", headers, body: datos });
@@ -283,6 +295,13 @@ export default function AyudaPage({ token, role }) {
 
                   {d.descripcion && <div className="text-muted small">{d.descripcion}</div>}
 
+                  {esAdmin && (
+                    <div className="small text-muted">
+                      <i className="bi bi-people me-1" />
+                      {d.roles_visibles?.length ? d.roles_visibles.join(", ") : "Todos los roles"}
+                    </div>
+                  )}
+
                   <div className="text-muted small mt-auto">
                     {formatoTamano(d.tamano)} ·{" "}
                     {new Date(d.created_at).toLocaleDateString("es-CL")}
@@ -385,7 +404,7 @@ export default function AyudaPage({ token, role }) {
             </datalist>
           </Form.Group>
 
-          <Form.Group>
+          <Form.Group className="mb-3">
             <Form.Label>Descripción (opcional)</Form.Label>
             <Form.Control
               as="textarea"
@@ -394,6 +413,25 @@ export default function AyudaPage({ token, role }) {
               value={form.descripcion}
               onChange={(e) => setForm((prev) => ({ ...prev, descripcion: e.target.value }))}
             />
+          </Form.Group>
+
+          <Form.Group>
+            <Form.Label>Quién puede verlo</Form.Label>
+            <div className="d-flex flex-wrap gap-3">
+              {ROLES.map((rol) => (
+                <Form.Check
+                  key={rol}
+                  type="checkbox"
+                  id={`rol-ayuda-${rol}`}
+                  label={rol}
+                  checked={form.roles.includes(rol)}
+                  onChange={() => alternarRol(rol)}
+                />
+              ))}
+            </div>
+            <Form.Text className="text-muted">
+              Sin selección, el documento es visible para todos los roles. Admin siempre lo ve.
+            </Form.Text>
           </Form.Group>
         </Modal.Body>
 

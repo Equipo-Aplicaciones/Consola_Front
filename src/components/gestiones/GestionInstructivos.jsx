@@ -20,6 +20,8 @@ export default function GestionInstructivos({ gestionId, token, puedeAdministrar
   const base = `${API_BASE_URL}/gestiones/${gestionId}/instructivos`;
 
   const cargar = useCallback(async () => {
+    if (!gestionId) return;
+
     try {
       const res = await fetch(base, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
@@ -30,7 +32,7 @@ export default function GestionInstructivos({ gestionId, token, puedeAdministrar
     } catch (err) {
       setError(err.message);
     }
-  }, [base, token]);
+  }, [base, gestionId, token]);
 
   useEffect(() => {
     cargar();
@@ -117,6 +119,8 @@ export default function GestionInstructivos({ gestionId, token, puedeAdministrar
       setError(err.message);
     }
   };
+
+  if (!gestionId) return null;
 
   if (!puedeAdministrar && instructivos.length === 0 && !error) return null;
 

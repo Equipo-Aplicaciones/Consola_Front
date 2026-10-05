@@ -280,9 +280,9 @@ export default function AyudaPage({ token, role }) {
           {filtrados.map((d) => (
             <div className="col-12 col-md-6 col-xl-4" key={d.id}>
               <div className="card shadow-sm h-100">
-                <div className="card-body d-flex flex-column gap-2">
+                <div className="card-body d-flex flex-column gap-2" style={{ overflowWrap: "anywhere" }}>
                   <div className="d-flex justify-content-between align-items-start gap-2">
-                    <h6 className="mb-0">
+                    <h6 className="mb-0" style={{ minWidth: 0, overflowWrap: "anywhere" }}>
                       <i className="bi bi-file-earmark-pdf text-danger me-1" />
                       {d.titulo}
                     </h6>

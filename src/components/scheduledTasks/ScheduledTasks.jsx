@@ -162,7 +162,7 @@ function ScheduledTasks({token}) {
                   <th>Activar</th>
                   <th>Desactivar</th>
                   <th className="text-center">Estado</th>
-                  <th className="text-center">Acciones</th>
+                  <th className="text-end">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,8 +196,8 @@ function ScheduledTasks({token}) {
                       }
                     </td>
                     
-                    <td className="text-center">
-                      <div className="d-flex justify-content-center align-items-center">
+                    <td className="text-end">
+                      <div className="d-flex justify-content-end align-items-center">
                         <div className="d-none d-md-flex gap-2">
                           {task.tipo_accion !== "OTRO" && (
                             <button size="sm" className="btn btn-sm btn-primary me-1" title="Ejecutar tarea"

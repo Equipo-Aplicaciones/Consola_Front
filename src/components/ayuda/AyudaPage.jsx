@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge, Button, Form, Modal, Spinner } from "react-bootstrap";
+import { Badge, Button, Col, Form, Modal, Row, Spinner } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -373,7 +373,7 @@ export default function AyudaPage({ token, role }) {
         </Modal.Footer>
       </Modal>
 
-      <Modal show={Boolean(formulario)} onHide={() => !guardando && setFormulario(null)} centered>
+      <Modal show={Boolean(formulario)} onHide={() => !guardando && setFormulario(null)} size="lg" centered>
         <Modal.Header closeButton>
           <Modal.Title className="fs-5">
             {formulario?.id ? "Editar documento" : "Subir documento"}
@@ -384,68 +384,80 @@ export default function AyudaPage({ token, role }) {
           {errorForm && <div className="alert alert-danger py-2">{errorForm}</div>}
 
           {!formulario?.id && (
-            <Form.Group className="mb-3">
-              <Form.Label>Archivo PDF</Form.Label>
-              <Form.Control
-                type="file"
-                accept="application/pdf,.pdf"
-                onChange={elegirArchivo}
-              />
+            <Form.Group as={Row} className="mb-3 align-items-center">
+              <Form.Label column sm={3}>Archivo PDF</Form.Label>
+              <Col sm={9}>
+                <Form.Control
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={elegirArchivo}
+                />
+              </Col>
             </Form.Group>
           )}
 
-          <Form.Group className="mb-3">
-            <Form.Label>Título</Form.Label>
-            <Form.Control
-              value={form.titulo}
-              maxLength={200}
-              onChange={(e) => setForm((prev) => ({ ...prev, titulo: e.target.value }))}
-            />
+          <Form.Group as={Row} className="mb-3 align-items-center">
+            <Form.Label column sm={3}>Título</Form.Label>
+            <Col sm={9}>
+              <Form.Control
+                value={form.titulo}
+                maxLength={200}
+                onChange={(e) => setForm((prev) => ({ ...prev, titulo: e.target.value }))}
+              />
+            </Col>
           </Form.Group>
 
-          <Form.Group className="mb-3">
-            <Form.Label>Categoría (opcional)</Form.Label>
-            <Form.Control
-              list="categorias-ayuda"
-              value={form.categoria}
-              maxLength={100}
-              onChange={(e) => setForm((prev) => ({ ...prev, categoria: e.target.value }))}
-            />
-            <datalist id="categorias-ayuda">
-              {categorias.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
+          <Form.Group as={Row} className="mb-3 align-items-center">
+            <Form.Label column sm={3}>Categoría</Form.Label>
+            <Col sm={9}>
+              <Form.Control
+                list="categorias-ayuda"
+                placeholder="Opcional"
+                value={form.categoria}
+                maxLength={100}
+                onChange={(e) => setForm((prev) => ({ ...prev, categoria: e.target.value }))}
+              />
+              <datalist id="categorias-ayuda">
+                {categorias.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </Col>
           </Form.Group>
 
-          <Form.Group className="mb-3">
-            <Form.Label>Descripción (opcional)</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={3}
-              maxLength={2000}
-              value={form.descripcion}
-              onChange={(e) => setForm((prev) => ({ ...prev, descripcion: e.target.value }))}
-            />
+          <Form.Group as={Row} className="mb-3">
+            <Form.Label column sm={3}>Descripción</Form.Label>
+            <Col sm={9}>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                placeholder="Opcional"
+                maxLength={2000}
+                value={form.descripcion}
+                onChange={(e) => setForm((prev) => ({ ...prev, descripcion: e.target.value }))}
+              />
+            </Col>
           </Form.Group>
 
-          <Form.Group>
-            <Form.Label>Quién puede verlo</Form.Label>
-            <div className="d-flex flex-wrap gap-3">
-              {ROLES.map((rol) => (
-                <Form.Check
-                  key={rol}
-                  type="checkbox"
-                  id={`rol-ayuda-${rol}`}
-                  label={rol}
-                  checked={form.roles.includes(rol)}
-                  onChange={() => alternarRol(rol)}
-                />
-              ))}
-            </div>
-            <Form.Text className="text-muted">
-              Sin selección, el documento es visible para todos los roles. Admin siempre lo ve.
-            </Form.Text>
+          <Form.Group as={Row}>
+            <Form.Label column sm={3}>Quién puede verlo</Form.Label>
+            <Col sm={9}>
+              <div className="d-flex flex-wrap gap-3 pt-md-2">
+                {ROLES.map((rol) => (
+                  <Form.Check
+                    key={rol}
+                    type="checkbox"
+                    id={`rol-ayuda-${rol}`}
+                    label={rol}
+                    checked={form.roles.includes(rol)}
+                    onChange={() => alternarRol(rol)}
+                  />
+                ))}
+              </div>
+              <Form.Text className="text-muted">
+                Sin selección, el documento es visible para todos los roles. Admin siempre lo ve.
+              </Form.Text>
+            </Col>
           </Form.Group>
         </Modal.Body>
 

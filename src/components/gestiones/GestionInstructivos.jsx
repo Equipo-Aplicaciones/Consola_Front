@@ -121,13 +121,45 @@ export default function GestionInstructivos({ gestionId, token, puedeAdministrar
   if (!puedeAdministrar && instructivos.length === 0 && !error) return null;
 
   return (
-    <div className="card shadow-sm mb-3">
-      <div className="card-body p-2">
-        <div className="d-flex justify-content-between align-items-center gap-2 flex-wrap">
-          <strong>
+    <div className="card shadow-sm mb-2">
+      <div className="card-body py-1 px-2">
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <strong className="small">
             <i className="bi bi-file-earmark-pdf me-1" />
             Instructivos
           </strong>
+
+          {instructivos.length === 0 && (
+            <span className="text-muted small">Sin instructivos cargados.</span>
+          )}
+
+          {instructivos.map((instructivo) => (
+            <div className="btn-group btn-group-sm" key={instructivo.id}>
+              <Button
+                variant="outline-secondary"
+                title={`${instructivo.nombre_archivo} (${formatoTamano(instructivo.tamano)})`}
+                onClick={() => ver(instructivo)}
+              >
+                <i className="bi bi-eye me-1" />
+                <span
+                  className="d-inline-block text-truncate align-bottom"
+                  style={{ maxWidth: 180 }}
+                >
+                  {instructivo.nombre_archivo}
+                </span>
+              </Button>
+
+              {puedeAdministrar && (
+                <Button
+                  variant="outline-danger"
+                  title="Eliminar"
+                  onClick={() => eliminar(instructivo)}
+                >
+                  <i className="bi bi-trash" />
+                </Button>
+              )}
+            </div>
+          ))}
 
           {puedeAdministrar && (
             <>
@@ -142,60 +174,23 @@ export default function GestionInstructivos({ gestionId, token, puedeAdministrar
               <Button
                 size="sm"
                 variant="outline-primary"
+                className="ms-auto"
+                title="Subir PDF"
                 disabled={subiendo}
                 onClick={() => inputRef.current?.click()}
               >
                 {subiendo ? (
-                  <Spinner size="sm" animation="border" className="me-1" />
+                  <Spinner size="sm" animation="border" />
                 ) : (
-                  <i className="bi bi-upload me-1" />
+                  <i className="bi bi-upload" />
                 )}
-                Subir PDF
+                <span className="d-none d-md-inline ms-1">Subir PDF</span>
               </Button>
             </>
           )}
         </div>
 
-        {error && <div className="alert alert-danger py-1 px-2 small mt-2 mb-0">{error}</div>}
-
-        {instructivos.length === 0 ? (
-          <div className="text-muted small mt-2">Sin instructivos cargados.</div>
-        ) : (
-          <ul className="list-unstyled mb-0 mt-2">
-            {instructivos.map((instructivo) => (
-              <li
-                key={instructivo.id}
-                className="d-flex justify-content-between align-items-center gap-2 py-1 border-top"
-              >
-                <div className="text-truncate" style={{ minWidth: 0 }}>
-                  <i className="bi bi-file-earmark-pdf text-danger me-1" />
-                  {instructivo.nombre_archivo}
-                  <span className="text-muted small ms-2">
-                    {formatoTamano(instructivo.tamano)}
-                  </span>
-                </div>
-
-                <div className="d-flex gap-1 flex-shrink-0">
-                  <Button size="sm" variant="outline-secondary" onClick={() => ver(instructivo)}>
-                    <i className="bi bi-eye me-1" />
-                    Ver
-                  </Button>
-
-                  {puedeAdministrar && (
-                    <Button
-                      size="sm"
-                      variant="outline-danger"
-                      title="Eliminar"
-                      onClick={() => eliminar(instructivo)}
-                    >
-                      <i className="bi bi-trash" />
-                    </Button>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        {error && <div className="alert alert-danger py-1 px-2 small mt-1 mb-0">{error}</div>}
       </div>
 
       <Modal show={Boolean(visor)} onHide={() => setVisor(null)} size="xl" centered scrollable>

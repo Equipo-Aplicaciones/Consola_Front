@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, Button, Form, Badge, Table } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
+import GestionInstructivos from "./GestionInstructivos";
 
 export default function GestionDetalleModal({ show, onClose, gestionId, token, refresh }) {
   const [gestion, setGestion] = useState(null);
@@ -817,6 +818,12 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                 </Button>
               </div>
             )}
+
+            <GestionInstructivos
+              gestionId={gestionId}
+              token={token}
+              puedeAdministrar={puedeAdministrarGestion}
+            />
 
             {/* PROGRESO */}
             <div className="progress mb-3">

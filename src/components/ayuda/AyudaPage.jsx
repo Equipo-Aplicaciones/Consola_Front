@@ -4,6 +4,12 @@ import { API_BASE_URL } from "../../config";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ROLES = ["Admin", "N1", "N2", "Gerente", "RRHH", "Comercial", "Zonal"];
+const LIMITE_LINEAS = (lineas) => ({
+  display: "-webkit-box",
+  WebkitLineClamp: lineas,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden"
+});
 const FORM_VACIO = { titulo: "", categoria: "", descripcion: "", roles: [] };
 
 function formatoTamano(bytes) {
@@ -282,7 +288,11 @@ export default function AyudaPage({ token, role }) {
               <div className="card shadow-sm h-100">
                 <div className="card-body d-flex flex-column gap-2" style={{ overflowWrap: "anywhere" }}>
                   <div className="d-flex justify-content-between align-items-start gap-2">
-                    <h6 className="mb-0" style={{ minWidth: 0, overflowWrap: "anywhere" }}>
+                    <h6
+                      className="mb-0"
+                      title={d.titulo}
+                      style={{ minWidth: 0, overflowWrap: "anywhere", ...LIMITE_LINEAS(2) }}
+                    >
                       <i className="bi bi-file-earmark-pdf text-danger me-1" />
                       {d.titulo}
                     </h6>
@@ -293,7 +303,11 @@ export default function AyudaPage({ token, role }) {
                     )}
                   </div>
 
-                  {d.descripcion && <div className="text-muted small">{d.descripcion}</div>}
+                  {d.descripcion && (
+                    <div className="text-muted small" title={d.descripcion} style={LIMITE_LINEAS(3)}>
+                      {d.descripcion}
+                    </div>
+                  )}
 
                   {esAdmin && (
                     <div className="small text-muted">

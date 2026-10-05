@@ -17,6 +17,7 @@ import Articulos from "./components/articles/ArticlesPage";
 import Vendedores from "./components/rrhh/Vendedores";
 import Totems from "./components/totems/TotemsDashboard";
 import Gestiones from "./components/gestiones/GestionesPage";
+import Ayuda from "./components/ayuda/AyudaPage";
 import TotemsQuickView from "./components/totems/TotemsQuickView";
 import ProtectedByRole from "./components/ProtectedByRole";
 import { useAuthGuard } from "./hooks/useAuthGuard";
@@ -51,7 +52,7 @@ function getHomeByRole(role) {
 function Layout({ token, user }) {
   const location = useLocation();
 
-  const MANAGEMENT_ROUTES = ["/admin", "/menu-locales","/vendedores","/totems","/articulos","/gestiones","/totems-quickview"];
+  const MANAGEMENT_ROUTES = ["/admin", "/menu-locales","/vendedores","/totems","/articulos","/gestiones","/totems-quickview","/ayuda"];
 
   const isManagementView = MANAGEMENT_ROUTES.some((path) =>
     location.pathname.startsWith(path)
@@ -139,6 +140,18 @@ function Layout({ token, user }) {
           element={
             <ProtectedByRole user={user} roles={["Admin", "N1", "Gerente","N2"]}>
               <TotemsQuickView token={token} />
+            </ProtectedByRole>
+          }
+        />
+
+        <Route
+          path="/ayuda"
+          element={
+            <ProtectedByRole
+              user={user}
+              roles={["Admin", "N1", "N2", "Gerente", "RRHH", "Comercial", "Zonal"]}
+            >
+              <Ayuda token={token} role={user?.role} />
             </ProtectedByRole>
           }
         />

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Navbar, Nav, Container, Button } from "react-bootstrap";
+import { Navbar, Nav, Container, Button, Dropdown } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config";
 
@@ -229,9 +229,20 @@ function MyNavbar({ user, onLogout, token }) {
           </Nav>
 
           <div className="d-flex align-items-center gap-2">
-            <span className="text-light">
-              {user?.full_name} ({user?.role})
-            </span>
+            <Dropdown align="end">
+              <Dropdown.Toggle variant="link" className="text-light text-decoration-none p-0 border-0">
+                {user?.full_name} ({user?.role})
+              </Dropdown.Toggle>
+
+              <Dropdown.Menu>
+                <Dropdown.Item onClick={() => { navigate("/ayuda");
+                    setExpanded(false);
+                  }} >
+                  <i className="bi bi-question-circle me-2" />
+                  Ayuda
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
 
             <div className="position-relative" ref={notificacionesRef}>
               <i className="bi bi-bell"

@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { Button } from "react-bootstrap";
+import { API_BASE_URL } from "../../config";
 import {
   allProducts,
   detectAdapter,
@@ -14,6 +15,8 @@ import {
 import { IMG_H, IMG_W, descargar, procesarImagen } from "./imagenes";
 import Miniatura from "./Miniatura";
 import EditarProductoModal from "./EditarProductoModal";
+import ExportarVersionModal from "./ExportarVersionModal";
+import HistorialEditorMenu from "./HistorialEditorMenu";
 import "./editorMenu.css";
 
 const MAX_HISTORIAL = 80;
@@ -29,7 +32,7 @@ const normalizar = (s) =>
 const ordenarCategorias = (lista) =>
   lista.sort((a, b) => a.hidden - b.hidden || (a.order ?? 1e9) - (b.order ?? 1e9));
 
-export default function EditorMenu() {
+export default function EditorMenu({ token }) {
   // El núcleo edita el JSON en el lugar: se guarda en una ref y `refrescar` fuerza el render.
   const store = useRef({
     data: null,
@@ -51,6 +54,10 @@ export default function EditorMenu() {
   const [editando, setEditando] = useState(null);
   const [ordenArrastre, setOrdenArrastre] = useState(null);
   const [destacada, setDestacada] = useState(null);
+  const [vista, setVista] = useState("editor");
+  const [exportando, setExportando] = useState(false);
+  const [guardandoVersion, setGuardandoVersion] = useState(false);
+  const [errorVersion, setErrorVersion] = useState("");
   const arrastrando = useRef(null);
   const listaRef = useRef(null);
 
@@ -357,7 +364,57 @@ export default function EditorMenu() {
   };
 
   /* ---------- Exportar ---------- */
-  const exportar = async () => {
+  const abrirExportacion = () => {
+    setErrorVersion("");
+    setExportando(true);
+  };
+
+  const cerrarExportacion = () => {
+    if (!guardandoVersion) setExportando(false);
+  };
+
+  const confirmarExportacion = async (descripcion) => {
+    const s = store.current;
+    const formulario = new FormData();
+    formulario.append(
+      "file",
+      new Blob([serialize(data, s.indent, s.floatKeys)], { type: "application/json" }),
+      s.fileName
+    );
+    formulario.append("descripcion", descripcion);
+    formulario.append("agregador", adapter.name);
+    formulario.append("cambios", JSON.stringify(diff(adapter, original, data)));
+    formulario.append("cantidad_imagenes", String(imgs.size));
+
+    setGuardandoVersion(true);
+    setErrorVersion("");
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/editor-menu/versiones`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formulario
+      });
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) throw new Error(json.error || "No se pudo guardar en el historial");
+    } catch (err) {
+      setErrorVersion(err.message);
+      setGuardandoVersion(false);
+      return;
+    }
+
+    setGuardandoVersion(false);
+    setExportando(false);
+    await exportarArchivos(true);
+  };
+
+  const exportarSinGuardar = async () => {
+    setExportando(false);
+    await exportarArchivos(false);
+  };
+
+  const exportarArchivos = async (guardada) => {
     const s = store.current;
     descargar(
       new Blob([serialize(data, s.indent, s.floatKeys)], { type: "application/json;charset=utf-8" }),
@@ -369,7 +426,7 @@ export default function EditorMenu() {
     if (!imgs.size) {
       avisar(
         aviso ? "warn" : "ok",
-        <>Exportado: <b>{s.fileName}</b>{aviso ? " · ⚠ hay imágenes sin identificar que no se exportaron" : ""}.</>
+        <>Exportado{guardada ? " y guardado en el historial" : ""}: <b>{s.fileName}</b>{aviso ? " · ⚠ hay imágenes sin identificar que no se exportaron" : ""}.</>
       );
       return;
     }
@@ -387,7 +444,7 @@ export default function EditorMenu() {
     }
 
     const csv =
-      "﻿" +
+      "\ufeff" +
       filas.map((f) => f.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\r\n");
     archivos.push({ name: "imagenes.csv", data: new TextEncoder().encode(csv) });
 
@@ -397,7 +454,7 @@ export default function EditorMenu() {
     avisar(
       aviso ? "warn" : "ok",
       <>
-        Exportado: <b>{s.fileName}</b> + <b>{nombreZip}</b> ({imgs.size} imagen(es) JPG {IMG_W}×{IMG_H}). Si el
+        Exportado{guardada ? " y guardado en el historial" : ""}: <b>{s.fileName}</b> + <b>{nombreZip}</b> ({imgs.size} imagen(es) JPG {IMG_W}×{IMG_H}). Si el
         navegador pregunta por descargas múltiples, elige Permitir.
         {aviso ? " ⚠ Hay imágenes sin identificar que no se exportaron." : ""}
       </>
@@ -436,337 +493,358 @@ export default function EditorMenu() {
 
   return (
     <div className="editor-menu">
-      <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
-        <h5 className="mb-0 me-auto">Editor de menú</h5>
-        <span className="badge text-bg-secondary">{cargado ? adapter.name : "Sin archivo"}</span>
+      <ul className="nav nav-pills mb-3">
+        {[
+          ["editor", "Editor"],
+          ["historial", "Historial de cambios"]
+        ].map(([clave, etiqueta]) => (
+          <li className="nav-item" key={clave}>
+            <button
+              type="button"
+              className={`nav-link py-1 ${vista === clave ? "active" : ""}`}
+              onClick={() => setVista(clave)}
+            >
+              {etiqueta}
+            </button>
+          </li>
+        ))}
+      </ul>
 
-        <label className="btn btn-sm btn-outline-secondary mb-0">
-          Abrir JSON
-          <input type="file" accept=".json,application/json" className="d-none" onChange={abrirJson} />
-        </label>
-        <label className={`btn btn-sm btn-outline-secondary mb-0 ${cargado ? "" : "disabled"}`}>
-          Cargar imágenes
-          <input type="file" accept="image/*" multiple className="d-none" onChange={cargarImagenes} />
-        </label>
-        <Button size="sm" variant="outline-secondary" disabled={!history.length} onClick={deshacer}>
-          Deshacer
-        </Button>
-        <Button size="sm" variant="primary" disabled={!cargado} onClick={exportar}>
-          Exportar JSON
-        </Button>
-      </div>
+      {vista === "historial" && <HistorialEditorMenu token={token} />}
 
-      <div
-        className={`alert py-2 mb-2 small alert-${
-          mensaje.tipo === "ok" ? "success" : mensaje.tipo === "warn" ? "danger" : "info"
-        }`}
-      >
-        {mensaje.contenido}
-      </div>
+      <div className={vista === "editor" ? "" : "d-none"}>
+        <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
+          <h5 className="mb-0 me-auto">Editor de menú</h5>
+          <span className="badge text-bg-secondary">{cargado ? adapter.name : "Sin archivo"}</span>
 
-      <div className="em-layout">
-        <aside className="em-panel">
-          <input
-            className="form-control form-control-sm mb-2"
-            placeholder="Buscar categoría..."
-            value={busquedaCat}
-            onChange={(e) => setBusquedaCat(e.target.value)}
-          />
-          <div className="small text-muted mb-1">Orden · Categoría · Productos</div>
+          <label className="btn btn-sm btn-outline-secondary mb-0">
+            Abrir JSON
+            <input type="file" accept=".json,application/json" className="d-none" onChange={abrirJson} />
+          </label>
+          <label className={`btn btn-sm btn-outline-secondary mb-0 ${cargado ? "" : "disabled"}`}>
+            Cargar imágenes
+            <input type="file" accept="image/*" multiple className="d-none" onChange={cargarImagenes} />
+          </label>
+          <Button size="sm" variant="outline-secondary" disabled={!history.length} onClick={deshacer}>
+            Deshacer
+          </Button>
+          <Button size="sm" variant="primary" disabled={!cargado} onClick={abrirExportacion}>
+            Exportar JSON
+          </Button>
+        </div>
 
-          {categorias
-            .filter(
-              (c) =>
-                !consultaCat ||
-                c.name.toLowerCase().includes(consultaCat) ||
-                c.id.toLowerCase().includes(consultaCat)
-            )
-            .map((c) => (
-              <div
-                key={c.id}
-                className={`em-cat ${c.id === seleccionada && !consultaItem ? "active" : ""} ${
-                  c.hidden ? "oculta" : ""
-                }`}
-                title={c.id + (c.hidden ? " (no publicada en el menú)" : "")}
-                onClick={() => {
-                  setSeleccionada(c.id);
-                  setBusquedaItem("");
-                }}
-              >
-                <input
-                  type="number"
-                  step="1"
-                  min="1"
-                  className="form-control form-control-sm"
-                  defaultValue={c.order ?? ""}
-                  key={`${c.id}-${c.order}`}
-                  disabled={c.hidden || !adapter.canSetCategoryOrder(data, c.id)}
-                  onClick={(e) => e.stopPropagation()}
-                  onBlur={(e) => {
-                    if (e.target.value !== String(c.order ?? "")) cambiarOrdenCategoria(c, e.target.value);
+        <div
+          className={`alert py-2 mb-2 small alert-${
+            mensaje.tipo === "ok" ? "success" : mensaje.tipo === "warn" ? "danger" : "info"
+          }`}
+        >
+          {mensaje.contenido}
+        </div>
+
+        <div className="em-layout">
+          <aside className="em-panel">
+            <input
+              className="form-control form-control-sm mb-2"
+              placeholder="Buscar categoría..."
+              value={busquedaCat}
+              onChange={(e) => setBusquedaCat(e.target.value)}
+            />
+            <div className="small text-muted mb-1">Orden · Categoría · Productos</div>
+
+            {categorias
+              .filter(
+                (c) =>
+                  !consultaCat ||
+                  c.name.toLowerCase().includes(consultaCat) ||
+                  c.id.toLowerCase().includes(consultaCat)
+              )
+              .map((c) => (
+                <div
+                  key={c.id}
+                  className={`em-cat ${c.id === seleccionada && !consultaItem ? "active" : ""} ${
+                    c.hidden ? "oculta" : ""
+                  }`}
+                  title={c.id + (c.hidden ? " (no publicada en el menú)" : "")}
+                  onClick={() => {
+                    setSeleccionada(c.id);
+                    setBusquedaItem("");
                   }}
-                  onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
-                />
-                <span className="em-cat-nombre">{c.name}</span>
-                <span className="badge text-bg-light border">{c.count}</span>
-              </div>
-            ))}
-        </aside>
+                >
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    className="form-control form-control-sm"
+                    defaultValue={c.order ?? ""}
+                    key={`${c.id}-${c.order}`}
+                    disabled={c.hidden || !adapter.canSetCategoryOrder(data, c.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    onBlur={(e) => {
+                      if (e.target.value !== String(c.order ?? "")) cambiarOrdenCategoria(c, e.target.value);
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
+                  />
+                  <span className="em-cat-nombre">{c.name}</span>
+                  <span className="badge text-bg-light border">{c.count}</span>
+                </div>
+              ))}
+          </aside>
 
-        <main className="em-main">
-          <input
-            className="form-control mb-3"
-            placeholder="🔍 Buscar ítem por nombre, UUID/SKU o descripción..."
-            disabled={!cargado}
-            value={busquedaItem}
-            onChange={(e) => setBusquedaItem(e.target.value)}
-          />
+          <main className="em-main">
+            <input
+              className="form-control mb-3"
+              placeholder="🔍 Buscar ítem por nombre, UUID/SKU o descripción..."
+              disabled={!cargado}
+              value={busquedaItem}
+              onChange={(e) => setBusquedaItem(e.target.value)}
+            />
 
-          {!cargado && <div className="em-empty">Abre un archivo JSON para comenzar.</div>}
+            {!cargado && <div className="em-empty">Abre un archivo JSON para comenzar.</div>}
 
-          {cargado && consultaItem && (
-            <div>
-              <p className="small text-muted">
-                {resultados.length} resultado(s). Clic en el UUID para copiarlo.
-              </p>
-              {resultados.length === 0 && <div className="em-empty">Sin resultados.</div>}
+            {cargado && consultaItem && (
+              <div>
+                <p className="small text-muted">
+                  {resultados.length} resultado(s). Clic en el UUID para copiarlo.
+                </p>
+                {resultados.length === 0 && <div className="em-empty">Sin resultados.</div>}
 
-              <div className="em-lista">
-                {resultados.slice(0, 200).map((p) => (
-                  <div className="em-res" key={`${p.catId}-${p.key}`}>
-                    <Miniatura imagenNueva={imgs.get(p.uid)} url={p.image} tamano="md" />
+                <div className="em-lista">
+                  {resultados.slice(0, 200).map((p) => (
+                    <div className="em-res" key={`${p.catId}-${p.key}`}>
+                      <Miniatura imagenNueva={imgs.get(p.uid)} url={p.image} tamano="md" />
 
-                    <div>
-                      <div className="fw-semibold">{p.name}</div>
-                      <div className="small text-muted mt-1">
-                        UUID/SKU:{" "}
-                        <span
-                          className="em-uuid"
-                          title="Copiar"
+                      <div>
+                        <div className="fw-semibold">{p.name}</div>
+                        <div className="small text-muted mt-1">
+                          UUID/SKU:{" "}
+                          <span
+                            className="em-uuid"
+                            title="Copiar"
+                            onClick={() => {
+                              navigator.clipboard?.writeText(p.uid);
+                              avisar("ok", <>UUID copiado: <b>{p.uid}</b></>);
+                            }}
+                          >
+                            {p.uid}
+                          </span>
+                        </div>
+                        <div className="small text-muted mt-1">
+                          Categoría: <b>{p.catName}</b>
+                          {p.catHidden ? " (oculta)" : ""} · Orden: <b>{p.order ?? "—"}</b> · Precio:{" "}
+                          <b>{dinero(p.price)}</b>
+                        </div>
+                        <div className="mt-2">
+                          {p.desc || <i className="text-muted">Sin descripción</i>}
+                        </div>
+                        {p.image && (
+                          <div className="small text-muted mt-1 text-break">
+                            Imagen:{" "}
+                            <a href={p.image} target="_blank" rel="noreferrer">
+                              {p.image}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="d-flex flex-column gap-1">
+                        <Button size="sm" variant="primary" onClick={() => abrirEdicion(p.catId, p.key)}>
+                          Editar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline-secondary"
                           onClick={() => {
-                            navigator.clipboard?.writeText(p.uid);
-                            avisar("ok", <>UUID copiado: <b>{p.uid}</b></>);
+                            setSeleccionada(p.catId);
+                            setBusquedaItem("");
+                            setDestacada(p.key);
                           }}
                         >
-                          {p.uid}
-                        </span>
+                          Ver en categoría
+                        </Button>
                       </div>
-                      <div className="small text-muted mt-1">
-                        Categoría: <b>{p.catName}</b>
-                        {p.catHidden ? " (oculta)" : ""} · Orden: <b>{p.order ?? "—"}</b> · Precio:{" "}
-                        <b>{dinero(p.price)}</b>
-                      </div>
-                      <div className="mt-2">
-                        {p.desc || <i className="text-muted">Sin descripción</i>}
-                      </div>
-                      {p.image && (
-                        <div className="small text-muted mt-1 text-break">
-                          Imagen:{" "}
-                          <a href={p.image} target="_blank" rel="noreferrer">
-                            {p.image}
-                          </a>
-                        </div>
-                      )}
                     </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-                    <div className="d-flex flex-column gap-1">
-                      <Button size="sm" variant="primary" onClick={() => abrirEdicion(p.catId, p.key)}>
+            {cargado && !consultaItem && categoriaActual && (
+              <div>
+                <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
+                  <h5 className="mb-0 me-auto">{categoriaActual.name}</h5>
+                  {!adapter.positional && (
+                    <Button size="sm" variant="outline-secondary" onClick={renumerar}>
+                      Renumerar 1, 2, 3…
+                    </Button>
+                  )}
+                </div>
+
+                <p className="small text-muted">
+                  {adapter.positional
+                    ? "En Uber el orden es la posición: arrastra o escribe la posición. "
+                    : "Arrastra o escribe el orden. Los órdenes repetidos se marcan en naranjo. "}
+                  Usa "Editar" para descripción, precio e imagen.
+                </p>
+
+                <div
+                  className="em-lista"
+                  ref={listaRef}
+                  onDragOver={(e) => reordenarMientrasSeArrastra(e, ordenArrastre ?? clavesOriginales)}
+                >
+                  {productos.length === 0 && <div className="em-empty">Esta categoría no tiene productos.</div>}
+
+                  {productos.map((p) => (
+                    <div
+                      key={p.key}
+                      data-key={p.key}
+                      className={`em-prod ${p.order != null && repetidos[p.order] > 1 ? "dup" : ""} ${
+                        ordenArrastre && arrastrando.current === p.key ? "arrastrando" : ""
+                      } ${destacada === p.key ? "destacada" : ""}`}
+                      draggable
+                      onDragStart={() => {
+                        arrastrando.current = p.key;
+                      }}
+                      onDragEnd={() => terminarArrastre(clavesOriginales)}
+                    >
+                      <div className="em-handle">⋮⋮</div>
+                      <Miniatura imagenNueva={imgs.get(p.uid)} url={p.image} />
+
+                      <div>
+                        <div className="fw-semibold">{p.name}</div>
+                        <div className="em-pid">{p.uid}</div>
+                        <div className="em-pdesc">{p.desc}</div>
+                      </div>
+
+                      <div className="em-precio">{dinero(p.price)}</div>
+
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        title="Orden"
+                        className="form-control form-control-sm"
+                        defaultValue={p.order ?? ""}
+                        key={`${p.key}-${p.order}`}
+                        onBlur={(e) => {
+                          if (e.target.value !== String(p.order ?? "")) cambiarOrdenProducto(p, e.target.value);
+                        }}
+                        onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
+                      />
+
+                      <select
+                        title="Categoría"
+                        className="form-select form-select-sm"
+                        value={seleccionada}
+                        onChange={(e) => mover(p, seleccionada, e.target.value)}
+                      >
+                        {opcionesCategoria(seleccionada).map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <Button size="sm" variant="outline-secondary" onClick={() => abrirEdicion(seleccionada, p.key)}>
                         Editar
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline-secondary"
-                        onClick={() => {
-                          setSeleccionada(p.catId);
-                          setBusquedaItem("");
-                          setDestacada(p.key);
-                        }}
-                      >
-                        Ver en categoría
-                      </Button>
                     </div>
-                  </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </main>
+
+          <section className="em-panel">
+            <h6>Cambios respecto al original</h6>
+            {cambios.length ? (
+              <ul className="small ps-3 mb-0">
+                {cambios.map((c, i) => (
+                  <li key={i + c} className="mb-1 text-break">
+                    {c}
+                  </li>
                 ))}
-              </div>
-            </div>
-          )}
+              </ul>
+            ) : (
+              <div className="small text-muted">Sin cambios.</div>
+            )}
 
-          {cargado && !consultaItem && categoriaActual && (
-            <div>
-              <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
-                <h5 className="mb-0 me-auto">{categoriaActual.name}</h5>
-                {!adapter.positional && (
-                  <Button size="sm" variant="outline-secondary" onClick={renumerar}>
-                    Renumerar 1, 2, 3…
-                  </Button>
-                )}
-              </div>
+            <h6 className="em-sep">
+              Imágenes nuevas <span className="badge text-bg-light border">{imgs.size}</span>
+            </h6>
+            <div className="small text-muted mb-2">JPG 1440×1080 · se exportan en .zip como &lt;uuid&gt;.jpg</div>
 
-              <p className="small text-muted">
-                {adapter.positional
-                  ? "En Uber el orden es la posición: arrastra o escribe la posición. "
-                  : "Arrastra o escribe el orden. Los órdenes repetidos se marcan en naranjo. "}
-                Usa "Editar" para descripción, precio e imagen.
-              </p>
-
-              <div
-                className="em-lista"
-                ref={listaRef}
-                onDragOver={(e) => reordenarMientrasSeArrastra(e, ordenArrastre ?? clavesOriginales)}
-              >
-                {productos.length === 0 && <div className="em-empty">Esta categoría no tiene productos.</div>}
-
-                {productos.map((p) => (
-                  <div
-                    key={p.key}
-                    data-key={p.key}
-                    className={`em-prod ${p.order != null && repetidos[p.order] > 1 ? "dup" : ""} ${
-                      ordenArrastre && arrastrando.current === p.key ? "arrastrando" : ""
-                    } ${destacada === p.key ? "destacada" : ""}`}
-                    draggable
-                    onDragStart={() => {
-                      arrastrando.current = p.key;
-                    }}
-                    onDragEnd={() => terminarArrastre(clavesOriginales)}
-                  >
-                    <div className="em-handle">⋮⋮</div>
-                    <Miniatura imagenNueva={imgs.get(p.uid)} url={p.image} />
-
-                    <div>
-                      <div className="fw-semibold">{p.name}</div>
-                      <div className="em-pid">{p.uid}</div>
-                      <div className="em-pdesc">{p.desc}</div>
+            {imgs.size === 0 && <div className="small text-muted">Sin imágenes.</div>}
+            {[...imgs].map(([uid, im]) => (
+              <div className="em-img" key={uid}>
+                <img className="em-thumb" src={im.url} alt="" />
+                <div>
+                  <b>{productosPorUid.get(uid)?.name ?? "(no existe en el menú)"}</b>
+                  <div className="em-fn">
+                    {im.src} → {safeFile(uid)}.jpg
+                  </div>
+                  {im.warn.map((w) => (
+                    <div className="em-aviso" key={w}>
+                      ⚠ {w}
                     </div>
+                  ))}
+                </div>
+                <Button size="sm" variant="outline-secondary" onClick={() => quitarImagenNueva(uid)}>
+                  Quitar
+                </Button>
+              </div>
+            ))}
 
-                    <div className="em-precio">{dinero(p.price)}</div>
-
-                    <input
-                      type="number"
-                      step="1"
-                      min="1"
-                      title="Orden"
-                      className="form-control form-control-sm"
-                      defaultValue={p.order ?? ""}
-                      key={`${p.key}-${p.order}`}
-                      onBlur={(e) => {
-                        if (e.target.value !== String(p.order ?? "")) cambiarOrdenProducto(p, e.target.value);
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
-                    />
-
-                    <select
-                      title="Categoría"
-                      className="form-select form-select-sm"
-                      value={seleccionada}
-                      onChange={(e) => mover(p, seleccionada, e.target.value)}
-                    >
-                      {opcionesCategoria(seleccionada).map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <Button size="sm" variant="outline-secondary" onClick={() => abrirEdicion(seleccionada, p.key)}>
-                      Editar
+            {sinIdentificar.length > 0 && (
+              <>
+                <h6 className="em-sep text-warning-emphasis">
+                  Sin identificar <span className="badge text-bg-light border">{sinIdentificar.length}</span>
+                </h6>
+                <div className="small text-muted mb-2">
+                  Tip: nombra el archivo como el producto o con su UUID para que se identifique solo.
+                </div>
+                {sinIdentificar.map((im, i) => (
+                  <div className="em-img" key={im.url}>
+                    <img className="em-thumb" src={im.url} alt="" />
+                    <div>
+                      <div className="em-fn">{im.src}</div>
+                      <select
+                        className="form-select form-select-sm mt-1"
+                        value=""
+                        onChange={(e) => asignarSinIdentificar(i, e.target.value)}
+                      >
+                        <option value="">Asignar a producto…</option>
+                        {[...productosPorUid.values()]
+                          .sort((a, b) => a.name.localeCompare(b.name, "es"))
+                          .map((p) => (
+                            <option key={p.uid} value={p.uid}>
+                              {p.name}
+                              {imgs.has(p.uid) ? " (ya tiene nueva)" : ""}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                    <Button size="sm" variant="outline-secondary" onClick={() => descartarSinIdentificar(i)}>
+                      Descartar
                     </Button>
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
-        </main>
+              </>
+            )}
 
-        <section className="em-panel">
-          <h6>Cambios respecto al original</h6>
-          {cambios.length ? (
-            <ul className="small ps-3 mb-0">
-              {cambios.map((c, i) => (
-                <li key={i + c} className="mb-1 text-break">
-                  {c}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="small text-muted">Sin cambios.</div>
-          )}
-
-          <h6 className="em-sep">
-            Imágenes nuevas <span className="badge text-bg-light border">{imgs.size}</span>
-          </h6>
-          <div className="small text-muted mb-2">JPG 1440×1080 · se exportan en .zip como &lt;uuid&gt;.jpg</div>
-
-          {imgs.size === 0 && <div className="small text-muted">Sin imágenes.</div>}
-          {[...imgs].map(([uid, im]) => (
-            <div className="em-img" key={uid}>
-              <img className="em-thumb" src={im.url} alt="" />
-              <div>
-                <b>{productosPorUid.get(uid)?.name ?? "(no existe en el menú)"}</b>
-                <div className="em-fn">
-                  {im.src} → {safeFile(uid)}.jpg
-                </div>
-                {im.warn.map((w) => (
-                  <div className="em-aviso" key={w}>
-                    ⚠ {w}
+            {problemasImagenes.length > 0 && (
+              <>
+                <h6 className="em-sep text-warning-emphasis">
+                  Revisión imágenes del JSON <span className="badge text-bg-light border">{problemasImagenes.length}</span>
+                </h6>
+                {problemasImagenes.slice(0, 50).map((x, i) => (
+                  <div className="em-aviso mb-1" key={i + x}>
+                    ⚠ {x}
                   </div>
                 ))}
-              </div>
-              <Button size="sm" variant="outline-secondary" onClick={() => quitarImagenNueva(uid)}>
-                Quitar
-              </Button>
-            </div>
-          ))}
-
-          {sinIdentificar.length > 0 && (
-            <>
-              <h6 className="em-sep text-warning-emphasis">
-                Sin identificar <span className="badge text-bg-light border">{sinIdentificar.length}</span>
-              </h6>
-              <div className="small text-muted mb-2">
-                Tip: nombra el archivo como el producto o con su UUID para que se identifique solo.
-              </div>
-              {sinIdentificar.map((im, i) => (
-                <div className="em-img" key={im.url}>
-                  <img className="em-thumb" src={im.url} alt="" />
-                  <div>
-                    <div className="em-fn">{im.src}</div>
-                    <select
-                      className="form-select form-select-sm mt-1"
-                      value=""
-                      onChange={(e) => asignarSinIdentificar(i, e.target.value)}
-                    >
-                      <option value="">Asignar a producto…</option>
-                      {[...productosPorUid.values()]
-                        .sort((a, b) => a.name.localeCompare(b.name, "es"))
-                        .map((p) => (
-                          <option key={p.uid} value={p.uid}>
-                            {p.name}
-                            {imgs.has(p.uid) ? " (ya tiene nueva)" : ""}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <Button size="sm" variant="outline-secondary" onClick={() => descartarSinIdentificar(i)}>
-                    Descartar
-                  </Button>
-                </div>
-              ))}
-            </>
-          )}
-
-          {problemasImagenes.length > 0 && (
-            <>
-              <h6 className="em-sep text-warning-emphasis">
-                Revisión imágenes del JSON <span className="badge text-bg-light border">{problemasImagenes.length}</span>
-              </h6>
-              {problemasImagenes.slice(0, 50).map((x, i) => (
-                <div className="em-aviso mb-1" key={i + x}>
-                  ⚠ {x}
-                </div>
-              ))}
-            </>
-          )}
-        </section>
+              </>
+            )}
+          </section>
+        </div>
       </div>
 
       {editando && (
@@ -780,6 +858,19 @@ export default function EditorMenu() {
           onCerrar={() => setEditando(null)}
           onImagen={imagenDesdeModal}
           onQuitarImagen={() => quitarImagenNueva(editando.uid)}
+        />
+      )}
+
+      {exportando && (
+        <ExportarVersionModal
+          cantidadCambios={diff(adapter, original, data).length}
+          cantidadImagenes={imgs.size}
+          nombreArchivo={store.current.fileName}
+          guardando={guardandoVersion}
+          error={errorVersion}
+          onConfirmar={confirmarExportacion}
+          onExportarSinGuardar={exportarSinGuardar}
+          onCerrar={cerrarExportacion}
         />
       )}
     </div>

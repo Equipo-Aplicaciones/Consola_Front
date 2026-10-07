@@ -120,7 +120,7 @@ function DashMenu({ token, role }) {
       case "logs":
         return <LocalesLogsViewer token={token} />;
       case "editor-menu":
-        return role === "Admin" ? <EditorMenu /> : null;
+        return role === "Admin" ? <EditorMenu token={token} /> : null;
       default:
         return null;
     }

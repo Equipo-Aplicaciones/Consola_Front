@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge, Button, Form, Modal, Spinner } from "react-bootstrap";
+import { Badge, Button, Form, Spinner } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 import { descargar } from "./imagenes";
+import VerCambiosVersion from "./VerCambiosVersion";
 
 function formatoTamano(bytes) {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -154,41 +155,9 @@ export default function HistorialEditorMenu({ token }) {
         </div>
       )}
 
-      <Modal show={Boolean(detalle)} onHide={() => setDetalle(null)} size="lg" centered scrollable>
-        <Modal.Header closeButton>
-          <Modal.Title className="fs-5">Cambios de la versión</Modal.Title>
-        </Modal.Header>
-
-        <Modal.Body>
-          {detalle && (
-            <>
-              <div className="small text-muted mb-2">
-                {fecha(detalle.created_at)} · {detalle.usuario_nombre || "-"} · {detalle.agregador} ·{" "}
-                {detalle.nombre_archivo}
-              </div>
-              <p className="mb-3">{detalle.descripcion}</p>
-
-              {detalle.cambios.length === 0 ? (
-                <div className="text-muted small">Esta versión se exportó sin cambios respecto al original.</div>
-              ) : (
-                <ul className="small mb-0">
-                  {detalle.cambios.map((c, i) => (
-                    <li key={i} className="mb-1 text-break">
-                      {c}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-        </Modal.Body>
-
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setDetalle(null)}>
-            Cerrar
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      {detalle && (
+        <VerCambiosVersion version={detalle} token={token} fecha={fecha} onCerrar={() => setDetalle(null)} />
+      )}
     </div>
   );
 }

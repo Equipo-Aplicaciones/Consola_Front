@@ -196,30 +196,34 @@ function detectFloatKeys(text) {
 }
 function detectIndent(text) { const m = text.match(/\n( +|\t)"/); return m ? (m[1] === '\t' ? '\t' : m[1].length) : 4; }
 
-function diff(adapter, original, current) {
+// Cambios entre el original y el estado actual. Cada entrada trae un texto legible y los datos
+// estructurados (antes/después) para poder mostrarlos gráficamente.
+function diffDetalle(adapter, original, current) {
   const out = [], snap = j => { const m = {}; for (const p of allProducts(adapter, j)) { (m[p.key] = m[p.key] || []).push(p); } return m; };
   const A = snap(original), B = snap(current), fmt = n => '$' + Number(n).toLocaleString('es-CL');
   for (const [k, list] of Object.entries(B)) {
     const before = A[k]; if (!before) continue;
     const v = list[0], o = before[0];
+    const base = { key: k, uid: v.uid, nombre: v.name };
     const bc = before.map(x => x.catId).sort().join(), ac = list.map(x => x.catId).sort().join();
-    if (bc !== ac) out.push(`Movido: ${v.name} — ${before.map(x => x.catName).join(', ')} → ${list.map(x => x.catName).join(', ')}`);
-    else if (!adapter.positional && o.order !== v.order) out.push(`Orden: ${v.name} en ${v.catName} — ${o.order} → ${v.order}`);
-    if (o.price !== v.price) out.push(`Precio: ${v.name} — ${fmt(o.price)} → ${fmt(v.price)}`);
-    if (o.desc !== v.desc) out.push(`Descripción: ${v.name} — "${o.desc}" → "${v.desc}"`);
+    if (bc !== ac) out.push({ ...base, tipo: 'movido', antesIds: before.map(x => x.catId), despuesIds: list.map(x => x.catId), antes: before.map(x => x.catName).join(', '), despues: list.map(x => x.catName).join(', '), texto: `Movido: ${v.name} — ${before.map(x => x.catName).join(', ')} → ${list.map(x => x.catName).join(', ')}` });
+    else if (!adapter.positional && o.order !== v.order) out.push({ ...base, tipo: 'orden', catId: v.catId, catName: v.catName, antes: o.order, despues: v.order, texto: `Orden: ${v.name} en ${v.catName} — ${o.order} → ${v.order}` });
+    if (o.price !== v.price) out.push({ ...base, tipo: 'precio', antes: o.price, despues: v.price, texto: `Precio: ${v.name} — ${fmt(o.price)} → ${fmt(v.price)}` });
+    if (o.desc !== v.desc) out.push({ ...base, tipo: 'descripcion', antes: o.desc, despues: v.desc, texto: `Descripción: ${v.name} — "${o.desc}" → "${v.desc}"` });
   }
   const ca = adapter.categories(original), cb = adapter.categories(current);
   if (adapter.positional) {
     for (const c of cb) {
       if (!ca.some(x => x.id === c.id)) continue;
       const b = adapter.products(original, c.id).map(p => p.key), a = adapter.products(current, c.id).map(p => p.key);
-      if (a.filter(k => b.includes(k)).join() !== b.filter(k => a.includes(k)).join()) out.push(`Reordenado: ${c.name}`);
+      if (a.filter(k => b.includes(k)).join() !== b.filter(k => a.includes(k)).join()) out.push({ tipo: 'reordenado', catId: c.id, catName: c.name, texto: `Reordenado: ${c.name}` });
     }
     const seq = l => l.filter(c => c.order != null).sort((x, y) => x.order - y.order).map(c => c.name);
-    if (seq(ca).join() !== seq(cb).join()) out.push('Orden de categorías: ' + seq(cb).map((n, i) => (i + 1) + '. ' + n).join(' | '));
-  } else for (const c of cb) { const o = ca.find(x => x.id === c.id); if (o && o.order !== c.order) out.push(`Orden categoría: ${c.name} — ${o.order} → ${c.order}`); }
+    if (seq(ca).join() !== seq(cb).join()) out.push({ tipo: 'orden_categorias', antes: seq(ca), despues: seq(cb), texto: 'Orden de categorías: ' + seq(cb).map((n, i) => (i + 1) + '. ' + n).join(' | ') });
+  } else for (const c of cb) { const o = ca.find(x => x.id === c.id); if (o && o.order !== c.order) out.push({ tipo: 'orden_categoria', catId: c.id, catName: c.name, antes: o.order, despues: c.order, texto: `Orden categoría: ${c.name} — ${o.order} → ${c.order}` }); }
   return out;
 }
+const diff = (adapter, original, current) => diffDetalle(adapter, original, current).map(x => x.texto);
 
 // ---------- Imágenes: identificación por nombre de archivo ----------
 const normName = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\.[a-z0-9]+$/, '').replace(/[^a-z0-9]+/g, ' ').trim();
@@ -268,4 +272,4 @@ function makeZip(files) {
 }
 const safeFile = s => String(s).replace(/[\\/:*?"<>|]+/g, '_');
 
-export { PEYA, RAPPI, UBER, detectAdapter, allProducts, serialize, detectIndent, detectFloatKeys, diff, matchImage, makeZip, crc32, normName, safeFile };
+export { PEYA, RAPPI, UBER, detectAdapter, allProducts, serialize, detectIndent, detectFloatKeys, diff, diffDetalle, matchImage, makeZip, crc32, normName, safeFile };

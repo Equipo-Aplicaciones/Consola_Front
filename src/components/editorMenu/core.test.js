@@ -103,3 +103,33 @@ describe("Uber Eats", () => {
     expect(json.categories[1].entities.map((e) => e.id)).toEqual(["I1"]);
   });
 });
+
+describe("diffDetalle", () => {
+  test("entrega datos estructurados y diff() devuelve los mismos textos", () => {
+    const texto = cargarFixture("rappi-muestra.json");
+    const original = JSON.parse(texto);
+    const actual = JSON.parse(texto);
+    C.RAPPI.setPrice(actual, "C1", "0", 8990);
+    C.RAPPI.setDesc(actual, "C1", "0", "Más rico");
+    C.RAPPI.move(actual, "1", "C2", "C1");
+
+    const detalle = C.diffDetalle(C.RAPPI, original, actual);
+    const tipos = detalle.map((d) => d.tipo).sort();
+
+    expect(tipos).toEqual(["descripcion", "movido", "precio"]);
+
+    const precio = detalle.find((d) => d.tipo === "precio");
+    expect(precio).toMatchObject({ uid: "S1", nombre: "Pollo", antes: 7990, despues: 8990 });
+
+    const movido = detalle.find((d) => d.tipo === "movido");
+    expect(movido).toMatchObject({ uid: "S2", antesIds: ["C2"], despuesIds: ["C1"] });
+
+    expect(C.diff(C.RAPPI, original, actual)).toEqual(detalle.map((d) => d.texto));
+  });
+
+  test("sin cambios no devuelve entradas", () => {
+    const json = JSON.parse(cargarFixture("uber-muestra.json"));
+
+    expect(C.diffDetalle(C.UBER, json, JSON.parse(JSON.stringify(json)))).toEqual([]);
+  });
+});

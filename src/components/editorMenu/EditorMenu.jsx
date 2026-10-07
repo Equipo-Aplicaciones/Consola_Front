@@ -7,6 +7,7 @@ import {
   detectFloatKeys,
   detectIndent,
   diff,
+  diffDetalle,
   makeZip,
   matchImage,
   safeFile,
@@ -383,7 +384,9 @@ export default function EditorMenu({ token }) {
     );
     formulario.append("descripcion", descripcion);
     formulario.append("agregador", adapter.name);
-    formulario.append("cambios", JSON.stringify(diff(adapter, original, data)));
+    const detalle = diffDetalle(adapter, original, data);
+    formulario.append("cambios", JSON.stringify(detalle.map((d) => d.texto)));
+    formulario.append("cambios_detalle", JSON.stringify(detalle.map(({ texto, ...resto }) => resto)));
     formulario.append("cantidad_imagenes", String(imgs.size));
 
     setGuardandoVersion(true);

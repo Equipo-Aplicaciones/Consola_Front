@@ -1,5 +1,5 @@
-// src/components/AdminDashboard.jsx
-import React, { useEffect, useState, useRef } from "react";
+// src/components/pages/DashMenu.jsx
+import React, { useEffect, useRef, useState } from "react";
 import ArticlesPage from "../articles/ArticlesPage";
 import MenuLocales from "./MenuLocales";
 import LocalHorariosBasePage from "../horarios/HorariosBasePage";
@@ -7,47 +7,50 @@ import VentasDistribuidasView from "../horarios/VentasDistribuidasView";
 import LocalesLogsViewer from "../admin/LocalesLogsViewer";
 import EditorMenu from "../editorMenu/EditorMenu";
 
+import "../admin/AdminDashboard.css";
+
 function DashMenu({ token, role }) {
   const isZonal = role === "Zonal";
+  const menuRef = useRef(null);
 
+  const [openMenu, setOpenMenu] = useState(null);
   const [activeTab, setActiveTab] = useState(
     isZonal ? "horarios-base" : "menu-locales"
   );
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [visibleCount, setVisibleCount] = useState(3);
-  const [open, setOpen] = useState(false);
-
-  const containerRef = useRef(null);
-  const dropdownRef = useRef(null);
-
   /* ===============================
-     TABS SEGÚN ROL
+     GRUPOS Y TABS SEGÚN ROL
+     (mismo estilo del Panel de Administración)
   =============================== */
-  const tabs = [
-    ...(!isZonal
-      ? [
-          { key: "menu-locales", label: "Menú Locales" },
-          { key: "articulos", label: "Artículos" },
-        ]
-      : []),
-    { key: "horarios-base", label: "Horarios" },
-    { key: "ventas", label: "Ventas Diarias" },
-    ...(!isZonal ? [{ key: "logs", label: "Logs" }] : []),
-    ...(role === "Admin" ? [{ key: "editor-menu", label: "Editor de menú" }] : []),
+  const gruposBase = [
+    {
+      key: "menu",
+      label: "Menú",
+      icon: "bi bi-journal-richtext",
+      tabs: [
+        { key: "menu-locales", label: "Menú Locales", icon: "bi bi-list-ul", visible: !isZonal },
+        { key: "articulos", label: "Artículos", icon: "bi bi-basket", visible: !isZonal },
+        { key: "editor-menu", label: "Editor de menú", icon: "bi bi-pencil-square", visible: role === "Admin" }
+      ]
+    },
+    {
+      key: "locales",
+      label: "Locales",
+      icon: "bi bi-shop",
+      tabs: [
+        { key: "horarios-base", label: "Horarios", icon: "bi bi-clock" },
+        { key: "ventas", label: "Ventas Diarias", icon: "bi bi-graph-up-arrow" },
+        { key: "logs", label: "Logs", icon: "bi bi-journal-text", visible: !isZonal }
+      ]
+    }
   ];
 
-  /* ===============================
-     CONTROL RESPONSIVE
-  =============================== */
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const grupos = gruposBase
+    .map((grupo) => ({
+      ...grupo,
+      tabs: grupo.tabs.filter((tab) => tab.visible !== false)
+    }))
+    .filter((grupo) => grupo.tabs.length > 0);
 
   /* ===============================
      VALIDACIÓN ZONAL
@@ -60,49 +63,25 @@ function DashMenu({ token, role }) {
   }, [isZonal, activeTab]);
 
   /* ===============================
-     CÁLCULO DINÁMICO MOBILE
+     CERRAR POPUP AL HACER CLICK FUERA
   =============================== */
   useEffect(() => {
-    if (!isMobile) return;
-
-    const calculateTabs = () => {
-      if (!containerRef.current) return;
-
-      const width = containerRef.current.offsetWidth;
-      const tabWidth = 80;
-      const moreWidth = 60;
-
-      let count = Math.floor(width / tabWidth);
-
-      if (count < tabs.length) {
-        count = Math.floor((width - moreWidth) / tabWidth);
-      }
-
-      setVisibleCount(count > 0 ? count : 1);
-    };
-
-    calculateTabs();
-    window.addEventListener("resize", calculateTabs);
-
-    return () => window.removeEventListener("resize", calculateTabs);
-  }, [isMobile, tabs.length]);
-
-  const visibleTabs = tabs.slice(0, visibleCount);
-  const hiddenTabs = tabs.slice(visibleCount);
-
-  /* ===============================
-     CERRAR DROPDOWN
-  =============================== */
-  useEffect(() => {
-    const close = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setOpen(false);
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenu(null);
       }
     };
 
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const seleccionarTab = (tabKey) => {
+    setActiveTab(tabKey);
+    setOpenMenu(null);
+  };
+
+  const grupoActivo = (grupo) => grupo.tabs.some((tab) => tab.key === activeTab);
 
   /* ===============================
      RENDER TABS
@@ -128,77 +107,45 @@ function DashMenu({ token, role }) {
 
   return (
     <div className="container-fluid p-0">
-      <h4 className="fw-bold mb-2">Administración de Locales</h4>
-
-      {/* ===============================
-          DESKTOP → Bootstrap Tabs
-      =============================== */}
-      {!isMobile && (
-        <ul className="nav nav-tabs mb-2">
-          {tabs.map((tab) => (
-            <li className="nav-item" key={tab.key}>
-              <button
-                className={`nav-link ${
-                  activeTab === tab.key ? "active" : ""
-                }`}
-                onClick={() => setActiveTab(tab.key)}
-              >
-                {tab.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* ===============================
-          MOBILE → Tabs dinámicos
-      =============================== */}
-      {isMobile && (
-        <div className="tabs-line mb-3 gap-2" ref={containerRef}>
-          {visibleTabs.map((tab) => (
-            <button
-              key={tab.key}
-              className={`tab-line ${
-                activeTab === tab.key ? "active" : ""
-              }`}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              {tab.label}
-            </button>
-          ))}
-
-          {hiddenTabs.length > 0 && (
-            <div className="dropdown-custom" ref={dropdownRef}>
-              <button
-                className="tab-line more-btn"
-                onClick={() => setOpen((prev) => !prev)}
-              >
-                ...
-              </button>
-
-              {open && (
-                <div className="dropdown-menu-custom">
-                  {hiddenTabs.map((tab) => (
-                    <div
-                      key={tab.key}
-                      className="dropdown-item-custom"
-                      onClick={() => {
-                        setActiveTab(tab.key);
-                        setOpen(false);
-                      }}
-                    >
-                      {tab.label}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+      <div className="admin-header">
+        <div>
+          <h4 className="fw-bold mb-0">Administración de Locales</h4>
         </div>
-      )}
+      </div>
 
-      {/* CONTENIDO */}
-      <div >{renderTab()}</div>
+      <div className="admin-menu" ref={menuRef}>
+        {grupos.map((grupo) => (
+          <div className="admin-menu-group" key={grupo.key}>
+            <button
+              className={`admin-menu-button ${grupoActivo(grupo) ? "active" : ""}`}
+              onClick={() => setOpenMenu(openMenu === grupo.key ? null : grupo.key)}
+            >
+              <i className={grupo.icon}></i>
+              <span>{grupo.label}</span>
+              <i className={`bi bi-chevron-${openMenu === grupo.key ? "up" : "down"} admin-chevron`}></i>
+            </button>
+
+            {openMenu === grupo.key && (
+              <div className="admin-popup-menu">
+                {grupo.tabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    className={`admin-popup-item ${activeTab === tab.key ? "active" : ""}`}
+                    onClick={() => seleccionarTab(tab.key)}
+                  >
+                    <i className={tab.icon}></i>
+                    <span>{tab.label}</span>
+
+                    {activeTab === tab.key && <i className="bi bi-check-lg ms-auto"></i>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="admin-content">{renderTab()}</div>
     </div>
   );
 }

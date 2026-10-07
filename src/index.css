@@ -139,6 +139,29 @@ h2 {
 }
 
 
+/* border-collapse deja ver el contenido por los bordes de la cabecera sticky; se dibujan los bordes a mano */
+.tabla-gestion-locales table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border-top: 1px solid #dee2e6;
+  border-left: 1px solid #dee2e6;
+}
+
+.tabla-gestion-locales th,
+.tabla-gestion-locales td {
+  border-width: 0 1px 1px 0;
+  border-style: solid;
+  border-color: #dee2e6;
+}
+
+.tabla-gestion-locales thead th {
+  position: sticky;
+  top: -1px;
+  z-index: 2;
+  background: #fff;
+  background-clip: padding-box;
+}
+
 .action-buttons {
   gap: 6px;
 }

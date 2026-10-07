@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Modal, Button, Form, Badge, Table } from "react-bootstrap";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Modal, Button, Form, Badge, Table, Collapse } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 import GestionInstructivos from "./GestionInstructivos";
 
@@ -27,6 +27,9 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   });
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [errorEdicion, setErrorEdicion] = useState("");
+  const [compactado, setCompactado] = useState(false);
+  const tablaRef = useRef(null);
+  const bloqueRef = useRef(null);
 
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
   const role = user.role;
@@ -101,6 +104,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
     setComentarioMasivo("");
     setEditando(false);
     setErrorEdicion("");
+    setCompactado(false);
     cargarEstados();
     cargarGestion();
   }, [show, cargarEstados, cargarGestion]);
@@ -618,6 +622,26 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
     );
   };
 
+  const compacto = compactado && !editando;
+
+  // Se compacta solo si, tras ocultar el bloque, la tabla seguiría pudiendo
+  // hacer scroll; si no, el scrollTop se corregiría a 0 y volvería a expandirse en bucle.
+  const onScrollTabla = e => {
+    const el = e.currentTarget;
+
+    if (el.scrollTop <= 0) {
+      if (compactado) setCompactado(false);
+      return;
+    }
+
+    if (!compactado && el.scrollTop > 20) {
+      const sobrante = el.scrollHeight - el.clientHeight;
+      const altoBloque = bloqueRef.current?.offsetHeight || 0;
+
+      if (sobrante > altoBloque + 40) setCompactado(true);
+    }
+  };
+
   const gestionBloqueada =
     gestion?.estado_codigo === "SUSPENDIDA" ||
     gestion?.estado_codigo === "FINALIZADA" ||
@@ -637,7 +661,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
         </Modal.Title>
       </Modal.Header>
 
-      <Modal.Body>
+      <Modal.Body className="d-flex flex-column">
         {error && (
           <div className="alert alert-danger py-2">
             {error}
@@ -654,61 +678,66 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
           </div>
         ) : (
           <>
-            {/* CABECERA */}
-            <div className="d-flex flex-column flex-md-row justify-content-between gap-3 mb-2">
+            {/* CABECERA: título y estado siempre visibles */}
+            <div className="d-flex justify-content-between align-items-start gap-3 mb-1">
               <div className="flex-grow-1">
                 {editando ? (
-                  <>
-                    <Form.Control
-                      className="mb-1"
-                      value={formEdicion.nombre}
-                      onChange={e =>
-                        setFormEdicion(prev => ({ ...prev, nombre: e.target.value }))
-                      }
-                      placeholder="Nombre"
-                    />
-                    <Form.Control
-                      as="textarea"
-                      rows={2}
-                      value={formEdicion.descripcion}
-                      onChange={e =>
-                        setFormEdicion(prev => ({ ...prev, descripcion: e.target.value }))
-                      }
-                      placeholder="Descripción"
-                    />
-                  </>
+                  <Form.Control
+                    value={formEdicion.nombre}
+                    onChange={e =>
+                      setFormEdicion(prev => ({ ...prev, nombre: e.target.value }))
+                    }
+                    placeholder="Nombre"
+                  />
                 ) : (
-                  <>
-                    <h4 className="mb-1">
-                      {gestion.nombre}
-                    </h4>
-
-                    <div className="text-muted">
-                      {gestion.descripcion || "Sin descripción"}
-                    </div>
-                  </>
+                  <h4 className="mb-0">
+                    {gestion.nombre}
+                  </h4>
                 )}
               </div>
 
-              <div className="text-md-end d-flex flex-md-column align-items-md-end gap-2">
-                <Badge
-                  bg={badgeGestion(gestion.estado_codigo)}
-                  className="fs-6"
+              <Badge
+                bg={badgeGestion(gestion.estado_codigo)}
+                className="fs-6"
+              >
+                {gestion.estado_nombre}
+              </Badge>
+            </div>
+
+            {/* BLOQUE QUE SE OCULTA AL HACER SCROLL EN LA TABLA */}
+            <Collapse in={!compacto}>
+              <div className="flex-shrink-0">
+              <div ref={bloqueRef}>
+            <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
+              <div className="flex-grow-1">
+                {editando ? (
+                  <Form.Control
+                    as="textarea"
+                    rows={2}
+                    value={formEdicion.descripcion}
+                    onChange={e =>
+                      setFormEdicion(prev => ({ ...prev, descripcion: e.target.value }))
+                    }
+                    placeholder="Descripción"
+                  />
+                ) : (
+                  <div className="text-muted">
+                    {gestion.descripcion || "Sin descripción"}
+                  </div>
+                )}
+              </div>
+
+              {puedeAdministrarGestion && !editando && (
+                <Button
+                  size="sm"
+                  variant="outline-secondary"
+                  className="flex-shrink-0"
+                  onClick={iniciarEdicion}
                 >
-                  {gestion.estado_nombre}
-                </Badge>
-
-                {puedeAdministrarGestion && !editando && (
-                  <Button
-                    size="sm"
-                    variant="outline-secondary"
-                    onClick={iniciarEdicion}
-                  >
-                    <i className="bi bi-pencil me-1" />
-                    Editar
-                  </Button>
-                )}
-              </div>
+                  <i className="bi bi-pencil me-1" />
+                  Editar
+                </Button>
+              )}
             </div>
 
             {errorEdicion && (
@@ -858,6 +887,9 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                 No aplica: {resumen.noAplica}
               </Badge>
             </div>
+              </div>
+              </div>
+            </Collapse>
 
             {/* GESTIÓN SUSPENDIDA */}
             {gestion.estado_codigo === "SUSPENDIDA" && (
@@ -987,7 +1019,12 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
             </div>
 
             {/* TABLA DE LOCALES */}
-            <div className="table-responsive">
+            <div
+              className="table-responsive tabla-gestion-locales"
+              ref={tablaRef}
+              onScroll={onScrollTabla}
+              style={{ flex: "1 1 0", minHeight: 200, overflowY: "auto" }}
+            >
               <Table
                 hover
                 bordered

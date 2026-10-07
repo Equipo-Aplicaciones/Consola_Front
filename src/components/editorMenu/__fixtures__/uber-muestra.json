@@ -1,0 +1,75 @@
+{
+  "menus": [
+    {
+      "category_ids": [
+        "C1",
+        "C2"
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "id": "C1",
+      "title": {
+        "translations": {
+          "en": "Pollos"
+        }
+      },
+      "entities": [
+        {
+          "id": "I1",
+          "type": "ITEM"
+        },
+        {
+          "id": "I2",
+          "type": "ITEM"
+        }
+      ]
+    },
+    {
+      "id": "C2",
+      "title": {
+        "translations": {
+          "en": "Bebidas"
+        }
+      },
+      "entities": []
+    }
+  ],
+  "items": [
+    {
+      "id": "I1",
+      "title": {
+        "translations": {
+          "en": "Pollo"
+        }
+      },
+      "description": {
+        "translations": {
+          "en": "Rico"
+        }
+      },
+      "price_info": {
+        "price": 799000,
+        "overrides": []
+      }
+    },
+    {
+      "id": "I2",
+      "title": {
+        "translations": {
+          "en": "Alitas"
+        }
+      },
+      "description": {
+        "translations": {
+          "en": "Picantes"
+        }
+      },
+      "price_info": {
+        "price": 499000,
+        "overrides": []
+      }
+    }
+  ]
+}

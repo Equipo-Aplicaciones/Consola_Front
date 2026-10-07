@@ -1,0 +1,30 @@
+{
+  "items": [
+    {
+      "id": "1",
+      "sku": "S1",
+      "name": "Pollo",
+      "description": "Rico",
+      "price": 7990.0,
+      "sortingPosition": 1,
+      "category": {
+        "id": "C1",
+        "name": "Pollos",
+        "sortingPosition": 1
+      }
+    },
+    {
+      "id": "2",
+      "sku": "S2",
+      "name": "Papas",
+      "description": "Fritas",
+      "price": 2990.0,
+      "sortingPosition": 2,
+      "category": {
+        "id": "C2",
+        "name": "Acompañamientos",
+        "sortingPosition": 2
+      }
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import MenuLocales from "./MenuLocales";
 import LocalHorariosBasePage from "../horarios/HorariosBasePage";
 import VentasDistribuidasView from "../horarios/VentasDistribuidasView";
 import LocalesLogsViewer from "../admin/LocalesLogsViewer";
+import EditorMenu from "../editorMenu/EditorMenu";
 
 function DashMenu({ token, role }) {
   const isZonal = role === "Zonal";
@@ -33,6 +34,7 @@ function DashMenu({ token, role }) {
     { key: "horarios-base", label: "Horarios" },
     { key: "ventas", label: "Ventas Diarias" },
     ...(!isZonal ? [{ key: "logs", label: "Logs" }] : []),
+    ...(role === "Admin" ? [{ key: "editor-menu", label: "Editor de menú" }] : []),
   ];
 
   /* ===============================
@@ -117,6 +119,8 @@ function DashMenu({ token, role }) {
         return <VentasDistribuidasView token={token} />;
       case "logs":
         return <LocalesLogsViewer token={token} />;
+      case "editor-menu":
+        return role === "Admin" ? <EditorMenu /> : null;
       default:
         return null;
     }

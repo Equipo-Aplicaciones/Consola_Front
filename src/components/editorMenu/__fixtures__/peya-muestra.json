@@ -1,0 +1,88 @@
+{
+    "catalog": {
+        "items": {
+            "m": {
+                "type": "Menu",
+                "products": {
+                    "POSTRES": {
+                        "id": "POSTRES",
+                        "type": "Category",
+                        "order": 1
+                    }
+                }
+            },
+            "POSTRES": {
+                "type": "Category",
+                "title": {
+                    "default": "Postres"
+                },
+                "products": {
+                    "ef0c4464-5968-46fc-9693-579c1878f91b": {
+                        "id": "ef0c4464-5968-46fc-9693-579c1878f91b",
+                        "type": "Product",
+                        "order": 1
+                    },
+                    "f8dc512b-ebbf-41ed-bc39-5adf6da7bc49": {
+                        "id": "f8dc512b-ebbf-41ed-bc39-5adf6da7bc49",
+                        "type": "Product",
+                        "order": 2
+                    },
+                    "p3": {
+                        "id": "p3",
+                        "type": "Product",
+                        "order": 3
+                    }
+                }
+            },
+            "ef0c4464-5968-46fc-9693-579c1878f91b": {
+                "id": "ef0c4464-5968-46fc-9693-579c1878f91b",
+                "type": "Product",
+                "title": {
+                    "default": "Helado Oreo"
+                },
+                "description": {
+                    "default": "x"
+                },
+                "price": "2390",
+                "images": {
+                    "IMG-ef0c4464-5968-46fc-9693-579c1878f91b": {
+                        "id": "IMG-ef0c4464-5968-46fc-9693-579c1878f91b",
+                        "type": "Image"
+                    }
+                }
+            },
+            "IMG-ef0c4464-5968-46fc-9693-579c1878f91b": {
+                "id": "IMG-ef0c4464-5968-46fc-9693-579c1878f91b",
+                "type": "Image",
+                "url": "https://x/oreo.jpeg"
+            },
+            "f8dc512b-ebbf-41ed-bc39-5adf6da7bc49": {
+                "id": "f8dc512b-ebbf-41ed-bc39-5adf6da7bc49",
+                "type": "Product",
+                "title": {
+                    "default": "Helado Brownie"
+                },
+                "price": "2390",
+                "images": {
+                    "IMG-f8dc512b-ebbf-41ed-bc39-5adf6da7bc49": {
+                        "id": "IMG-f8dc512b-ebbf-41ed-bc39-5adf6da7bc49",
+                        "type": "Image"
+                    }
+                }
+            },
+            "IMG-f8dc512b-ebbf-41ed-bc39-5adf6da7bc49": {
+                "id": "IMG-ef0c4464-5968-46fc-9693-579c1878f91b",
+                "type": "Image",
+                "url": "https://x/brownie.jpeg"
+            },
+            "p3": {
+                "id": "p3",
+                "type": "Product",
+                "title": {
+                    "default": "Box Gringou"
+                },
+                "price": "9990"
+            }
+        }
+    }
+}

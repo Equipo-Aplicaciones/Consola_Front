@@ -9,6 +9,8 @@ function formatoTamano(bytes) {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
+const POR_PAGINA = 10;
+
 const normalizar = (s) =>
   String(s || "")
     .normalize("NFD")
@@ -21,6 +23,7 @@ export default function HistorialEditorMenu({ token }) {
   const [error, setError] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [detalle, setDetalle] = useState(null);
+  const [pagina, setPagina] = useState(1);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -54,6 +57,11 @@ export default function HistorialEditorMenu({ token }) {
       return terminos.every((t) => texto.includes(t));
     });
   }, [versiones, busqueda]);
+
+  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / POR_PAGINA));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const desde = (paginaActual - 1) * POR_PAGINA;
+  const visibles = filtradas.slice(desde, desde + POR_PAGINA);
 
   const descargarVersion = async (version) => {
     setError("");
@@ -90,7 +98,10 @@ export default function HistorialEditorMenu({ token }) {
         <Form.Control
           placeholder="Buscar por descripción, usuario, archivo o agregador..."
           value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+          onChange={(e) => {
+            setBusqueda(e.target.value);
+            setPagina(1);
+          }}
         />
         <Button variant="outline-secondary" title="Actualizar" onClick={cargar}>
           <i className="bi bi-arrow-clockwise" />
@@ -125,7 +136,7 @@ export default function HistorialEditorMenu({ token }) {
               </tr>
             </thead>
             <tbody>
-              {filtradas.map((v) => (
+              {visibles.map((v) => (
                 <tr key={v.id}>
                   <td className="text-nowrap">{fecha(v.created_at)}</td>
                   <td>{v.usuario_nombre || "-"}</td>
@@ -152,6 +163,30 @@ export default function HistorialEditorMenu({ token }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!cargando && filtradas.length > POR_PAGINA && (
+        <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 small">
+          <span className="text-muted">
+            Mostrando {desde + 1}–{Math.min(desde + POR_PAGINA, filtradas.length)} de {filtradas.length}
+          </span>
+
+          <div className="btn-group btn-group-sm">
+            <Button variant="outline-secondary" disabled={paginaActual === 1} onClick={() => setPagina(paginaActual - 1)}>
+              Anterior
+            </Button>
+            <Button variant="outline-secondary" disabled>
+              {paginaActual} / {totalPaginas}
+            </Button>
+            <Button
+              variant="outline-secondary"
+              disabled={paginaActual === totalPaginas}
+              onClick={() => setPagina(paginaActual + 1)}
+            >
+              Siguiente
+            </Button>
+          </div>
         </div>
       )}
 

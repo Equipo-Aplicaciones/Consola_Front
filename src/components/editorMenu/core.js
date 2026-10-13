@@ -21,7 +21,7 @@ function writeText(obj, key, text, shapeIfMissing) {
   }
   obj[key] = shapeIfMissing(text);
 }
-const IMAGE_KEYS = ['image_url', 'imageUrl', 'image', 'images', 'imageURL', 'imagen_url', 'photo', 'photoUrl', 'picture', 'img'];
+const IMAGE_KEYS = ['image_url', 'imageUrl', 'url', 'image', 'images', 'imageURL', 'photo', 'photoUrl', 'picture', 'img'];
 function findImage(o) {
   if (!o) return '';
   for (const k of IMAGE_KEYS) {

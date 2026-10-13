@@ -212,17 +212,27 @@ describe("imágenes: nombres a partir de la URL del JSON", () => {
     expect(entradas.map((e) => e.omitida)).toEqual([false, true]);
   });
 
-  test("Rappi y Uber: escriben en el campo de imagen que ya existe (imagen_url / imageURL)", () => {
+  test("Rappi y Uber: escriben en el campo de imagen que ya existe (image_url / imageUrl / url)", () => {
     const rappi = JSON.parse(cargarFixture("rappi-muestra.json"));
-    rappi.items[0].imagen_url = `${URL_BASE}${ID}.jpeg`;
+    rappi.items[0].image_url = `${URL_BASE}${ID}.jpeg`;
     const r = C.aplicarImagenes(C.RAPPI, rappi, ["S1"], "13102026");
     expect(r.entradas[0].archivoFecha).toBe(`${ID}-13102026.jpeg`);
-    expect(r.clon.items[0].imagen_url).toBe(`${URL_BASE}${ID}-13102026.jpeg`);
+    expect(r.clon.items[0].image_url).toBe(`${URL_BASE}${ID}-13102026.jpeg`);
 
     const uber = JSON.parse(cargarFixture("uber-muestra.json"));
-    uber.items[0].imageURL = `${URL_BASE}${ID}.jpeg`;
+    uber.items[0].imageUrl = `${URL_BASE}${ID}.jpeg`;
     const u = C.aplicarImagenes(C.UBER, uber, ["I1"], "13102026");
-    expect(u.clon.items[0].imageURL).toBe(`${URL_BASE}${ID}-13102026.jpeg`);
+    expect(u.clon.items[0].imageUrl).toBe(`${URL_BASE}${ID}-13102026.jpeg`);
+  });
+
+  test("también reconoce el campo url directo en el producto", () => {
+    const rappi = JSON.parse(cargarFixture("rappi-muestra.json"));
+    rappi.items[1].url = `${URL_BASE}${ID}.jpeg`;
+
+    const r = C.aplicarImagenes(C.RAPPI, rappi, ["S2"], "13102026");
+
+    expect(r.entradas[0].archivoBase).toBe(`${ID}.jpeg`);
+    expect(r.clon.items[1].url).toBe(`${URL_BASE}${ID}-13102026.jpeg`);
   });
 
   test("diffDetalle informa el cambio de imagen", () => {

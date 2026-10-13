@@ -270,6 +270,18 @@ function makeZip(files) {
   let p = 0; for (const a of parts) { out.set(a, p); p += a.length; }
   return out;
 }
+// Nombre del archivo sin extensión ni sufijos acumulados ("-editado", marcas de fecha, " (1)"),
+// para que reabrir un JSON ya exportado no vaya alargando el nombre.
+function nombreBase(nombre) {
+  let b = String(nombre || '').replace(/\.json$/i, '').trim(), previo;
+  do { previo = b; b = b.replace(/\s*\(\d+\)$/, '').replace(/-editado(-\d{8}-\d{4})?$/, ''); } while (b !== previo);
+  return b || 'menu';
+}
+// AAAAMMDD-HHmm en hora local
+function marcaTiempo(d) {
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+}
 const safeFile = s => String(s).replace(/[\\/:*?"<>|]+/g, '_');
 
-export { PEYA, RAPPI, UBER, detectAdapter, allProducts, serialize, detectIndent, detectFloatKeys, diff, diffDetalle, matchImage, makeZip, crc32, normName, safeFile };
+export { PEYA, RAPPI, UBER, detectAdapter, allProducts, serialize, detectIndent, detectFloatKeys, diff, diffDetalle, matchImage, makeZip, crc32, normName, safeFile, nombreBase, marcaTiempo };

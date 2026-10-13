@@ -9,7 +9,9 @@ import {
   diff,
   diffDetalle,
   makeZip,
+  marcaTiempo,
   matchImage,
+  nombreBase,
   safeFile,
   serialize
 } from "./core";
@@ -43,6 +45,7 @@ export default function EditorMenu({ token }) {
     floatKeys: [],
     fileName: "menu-editado.json",
     baseName: "menu",
+    marca: "",
     history: [],
     imgs: new Map(), // uid -> {blob,url,src,w,h,warn}
     sinIdentificar: [] // [{blob,url,src,w,h,warn}]
@@ -125,7 +128,7 @@ export default function EditorMenu({ token }) {
       s.adapter = a;
       s.indent = detectIndent(texto);
       s.floatKeys = detectFloatKeys(texto);
-      s.baseName = archivo.name.replace(/\.json$/i, "");
+      s.baseName = nombreBase(archivo.name);
       s.fileName = s.baseName + "-editado.json";
 
       setBusquedaItem("");
@@ -366,6 +369,9 @@ export default function EditorMenu({ token }) {
 
   /* ---------- Exportar ---------- */
   const abrirExportacion = () => {
+    const s = store.current;
+    s.marca = marcaTiempo(new Date());
+    s.fileName = `${s.baseName}-editado-${s.marca}.json`;
     setErrorVersion("");
     setExportando(true);
   };
@@ -419,10 +425,8 @@ export default function EditorMenu({ token }) {
 
   const exportarArchivos = async (guardada) => {
     const s = store.current;
-    descargar(
-      new Blob([serialize(data, s.indent, s.floatKeys)], { type: "application/json;charset=utf-8" }),
-      s.fileName
-    );
+    const contenido = serialize(data, s.indent, s.floatKeys);
+    descargar(new Blob([contenido], { type: "application/json;charset=utf-8" }), s.fileName);
 
     const aviso = sinIdentificar.length;
 
@@ -451,7 +455,7 @@ export default function EditorMenu({ token }) {
       filas.map((f) => f.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\r\n");
     archivos.push({ name: "imagenes.csv", data: new TextEncoder().encode(csv) });
 
-    const nombreZip = s.baseName + "-imagenes.zip";
+    const nombreZip = `${s.baseName}-imagenes-${s.marca}.zip`;
     setTimeout(() => descargar(new Blob([makeZip(archivos)], { type: "application/zip" }), nombreZip), 400);
 
     avisar(

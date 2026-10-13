@@ -21,9 +21,10 @@ function writeText(obj, key, text, shapeIfMissing) {
   }
   obj[key] = shapeIfMissing(text);
 }
+const IMAGE_KEYS = ['image_url', 'imageUrl', 'image', 'images', 'imageURL', 'imagen_url', 'photo', 'photoUrl', 'picture', 'img'];
 function findImage(o) {
   if (!o) return '';
-  for (const k of ['image_url', 'imageUrl', 'image', 'images', 'imageURL', 'photo', 'photoUrl', 'picture', 'img']) {
+  for (const k of IMAGE_KEYS) {
     const v = o[k];
     if (!v) continue;
     if (typeof v === 'string') return v;
@@ -31,6 +32,27 @@ function findImage(o) {
     if (typeof v === 'object') { if (v.url) return v.url; if (Array.isArray(v.urls)) return v.urls[0] || ''; if (v.default) return v.default; }
   }
   return '';
+}
+// Escribe la URL en el mismo campo/forma que findImage() lee. Devuelve true si encontró dónde escribir.
+function setImageUrl(o, url) {
+  if (!o) return false;
+  for (const k of IMAGE_KEYS) {
+    const v = o[k];
+    if (!v) continue;
+    if (typeof v === 'string') { o[k] = url; return true; }
+    if (Array.isArray(v)) {
+      const f = v[0];
+      if (typeof f === 'string') { v[0] = url; return true; }
+      if (f && typeof f === 'object') { for (const c of ['url', 'src', 'default']) if (f[c]) { f[c] = url; return true; } }
+      continue;
+    }
+    if (typeof v === 'object') {
+      if (v.url) { v.url = url; return true; }
+      if (Array.isArray(v.urls) && v.urls[0]) { v.urls[0] = url; return true; }
+      if (v.default) { v.default = url; return true; }
+    }
+  }
+  return false;
 }
 function writeNumberLike(obj, key, n) { obj[key] = typeof obj[key] === 'string' ? String(n) : n; }
 
@@ -48,6 +70,13 @@ const PEYA = {
       for (const ref of Object.keys(it.images)) { const im = items[ref]; if (im && im.url) return im.url; }
     }
     return findImage(it);
+  },
+  setImage(j, catId, key, url) {
+    const items = this._items(j), it = items[key];
+    if (it && it.images && typeof it.images === 'object' && !Array.isArray(it.images)) {
+      for (const ref of Object.keys(it.images)) { const im = items[ref]; if (im && im.url) { im.url = url; return true; } }
+    }
+    return setImageUrl(it, url);
   },
   imageIssues(j) {
     const items = this._items(j), out = [], seen = new Map();
@@ -118,6 +147,7 @@ const RAPPI = {
     return { uid: it.sku || it.id || key, name: readText(it.name).trim() || it.sku, desc: readText(it.description), price: Number(it.price ?? 0), image: findImage(it) };
   },
   setDesc(j, catId, key, text) { writeText(j.items[Number(key)], 'description', text, t => t); },
+  setImage(j, catId, key, url) { return setImageUrl(j.items[Number(key)], url); },
   setPrice(j, catId, key, n) { writeNumberLike(j.items[Number(key)], 'price', n); },
   setOrder(j, catId, key, n) { j.items[Number(key)].sortingPosition = n; },
   move(j, key, from, to) {
@@ -158,6 +188,7 @@ const UBER = {
     return { uid: key, name: readText(it.title).trim() || key, desc: readText(it.description), price: (it.price_info?.price ?? 0) / 100, image: findImage(it) };
   },
   setDesc(j, catId, key, text) { writeText(this._item(j, key), 'description', text, t => ({ translations: { en: t } })); },
+  setImage(j, catId, key, url) { return setImageUrl(this._item(j, key), url); },
   setPrice(j, catId, key, n) {
     const it = this._item(j, key);
     it.price_info = it.price_info || { price: 0, overrides: [] };
@@ -209,6 +240,7 @@ function diffDetalle(adapter, original, current) {
     if (bc !== ac) out.push({ ...base, tipo: 'movido', antesIds: before.map(x => x.catId), despuesIds: list.map(x => x.catId), antes: before.map(x => x.catName).join(', '), despues: list.map(x => x.catName).join(', '), texto: `Movido: ${v.name} — ${before.map(x => x.catName).join(', ')} → ${list.map(x => x.catName).join(', ')}` });
     else if (!adapter.positional && o.order !== v.order) out.push({ ...base, tipo: 'orden', catId: v.catId, catName: v.catName, antes: o.order, despues: v.order, texto: `Orden: ${v.name} en ${v.catName} — ${o.order} → ${v.order}` });
     if (o.price !== v.price) out.push({ ...base, tipo: 'precio', antes: o.price, despues: v.price, texto: `Precio: ${v.name} — ${fmt(o.price)} → ${fmt(v.price)}` });
+    if (o.image !== v.image) out.push({ ...base, tipo: 'imagen', antes: o.image, despues: v.image, texto: `Imagen: ${v.name} — ${ultimoSegmento(o.image) || '(sin imagen)'} → ${ultimoSegmento(v.image) || '(sin imagen)'}` });
     if (o.desc !== v.desc) out.push({ ...base, tipo: 'descripcion', antes: o.desc, despues: v.desc, texto: `Descripción: ${v.name} — "${o.desc}" → "${v.desc}"` });
   }
   const ca = adapter.categories(original), cb = adapter.categories(current);
@@ -282,6 +314,70 @@ function marcaTiempo(d) {
   const p = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
 }
+// Último tramo de la ruta de una URL, sin parámetros (query / #)
+function ultimoSegmento(url) {
+  const ruta = String(url || '').split(/[?#]/)[0];
+  return ruta.slice(ruta.lastIndexOf('/') + 1);
+}
+// Nombre del archivo de la URL sin extensión: es el id propio de la imagen
+function idDeImagen(url) {
+  return ultimoSegmento(url).replace(/\.[A-Za-z0-9]+$/, '');
+}
+// Misma carpeta de la URL, con otro nombre de archivo
+function urlConNombre(url, nombre) {
+  const ruta = String(url || '').split(/[?#]/)[0];
+  return ruta.slice(0, ruta.lastIndexOf('/') + 1) + nombre;
+}
+// ddmmaaaa
+function marcaFecha(d) {
+  const p = n => String(n).padStart(2, '0');
+  return `${p(d.getDate())}${p(d.getMonth() + 1)}${d.getFullYear()}`;
+}
+
+// Prepara las imágenes nuevas: calcula los nombres a partir del id de la URL actual del producto
+// (<id>.jpeg y <id>-ddmmaaaa.jpeg) y devuelve una COPIA del JSON con la URL apuntando al nombre con fecha.
+function aplicarImagenes(adapter, data, uids, fecha) {
+  const clon = JSON.parse(JSON.stringify(data));
+  const productos = new Map();
+  for (const p of allProducts(adapter, clon)) if (!productos.has(p.uid)) productos.set(p.uid, p);
+
+  const usados = new Map();
+  const entradas = [];
+
+  for (const uid of uids) {
+    const p = productos.get(uid);
+    const avisos = [];
+    let id = p ? idDeImagen(p.image) : '';
+    let modificaJson = Boolean(id);
+
+    if (!id) {
+      id = safeFile(uid);
+      avisos.push('el producto no tiene URL de imagen en el JSON: se usó el UUID/SKU y el JSON no se modificó');
+    }
+
+    const base = { uid, producto: p ? p.name : '', categoria: p ? p.catName : '', urlAnterior: p ? p.image : '', archivoBase: id + '.jpeg', archivoFecha: id + '-' + fecha + '.jpeg' };
+
+    if (usados.has(id)) {
+      entradas.push({ ...base, urlNueva: '', omitida: true, avisos: ['comparte la misma imagen con otro producto (' + usados.get(id) + '): no se exportó'] });
+      continue;
+    }
+    usados.set(id, uid);
+
+    let urlNueva = '';
+    if (modificaJson) {
+      urlNueva = urlConNombre(p.image, base.archivoFecha);
+      if (!adapter.setImage(clon, p.catId, p.key, urlNueva)) {
+        urlNueva = '';
+        avisos.push('no se pudo actualizar la URL de la imagen en el JSON');
+      }
+    }
+
+    entradas.push({ ...base, urlNueva, omitida: false, avisos });
+  }
+
+  return { clon, entradas };
+}
+
 const safeFile = s => String(s).replace(/[\\/:*?"<>|]+/g, '_');
 
-export { PEYA, RAPPI, UBER, detectAdapter, allProducts, serialize, detectIndent, detectFloatKeys, diff, diffDetalle, matchImage, makeZip, crc32, normName, safeFile, nombreBase, marcaTiempo };
+export { PEYA, RAPPI, UBER, detectAdapter, allProducts, serialize, detectIndent, detectFloatKeys, diff, diffDetalle, matchImage, makeZip, crc32, normName, safeFile, nombreBase, marcaTiempo, ultimoSegmento, idDeImagen, urlConNombre, marcaFecha, aplicarImagenes };

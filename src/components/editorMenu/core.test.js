@@ -154,3 +154,86 @@ describe("nombres de archivo exportado", () => {
     expect(C.marcaTiempo(new Date(2026, 9, 13, 9, 5))).toBe("20261013-0905");
   });
 });
+
+describe("imágenes: nombres a partir de la URL del JSON", () => {
+  const URL_BASE = "https://storesvc0001.blob.core.windows.net/images/tarragona/ta/";
+  const ID = "7a3b5add-1185-44b4-9c5e-f52883c901c2";
+
+  test("idDeImagen y urlConNombre", () => {
+    expect(C.idDeImagen(`${URL_BASE}${ID}.jpeg`)).toBe(ID);
+    expect(C.idDeImagen(`${URL_BASE}${ID}.jpeg?v=2#x`)).toBe(ID);
+    expect(C.idDeImagen("")).toBe("");
+    expect(C.idDeImagen(URL_BASE)).toBe("");
+    expect(C.urlConNombre(`${URL_BASE}${ID}.jpeg?v=2`, `${ID}-13102026.jpeg`)).toBe(`${URL_BASE}${ID}-13102026.jpeg`);
+  });
+
+  test("marcaFecha entrega ddmmaaaa", () => {
+    expect(C.marcaFecha(new Date(2026, 9, 3, 15, 30))).toBe("03102026");
+  });
+
+  test("PedidosYa: nombra con el id de la URL y actualiza el ítem IMG del JSON (sin tocar el original)", () => {
+    const json = JSON.parse(cargar());
+    const oreo = "ef0c4464-5968-46fc-9693-579c1878f91b";
+    json.catalog.items["IMG-" + oreo].url = `${URL_BASE}${ID}.jpeg`;
+
+    const { clon, entradas } = C.aplicarImagenes(C.PEYA, json, [oreo], "13102026");
+
+    expect(entradas[0]).toMatchObject({
+      archivoBase: `${ID}.jpeg`,
+      archivoFecha: `${ID}-13102026.jpeg`,
+      urlAnterior: `${URL_BASE}${ID}.jpeg`,
+      urlNueva: `${URL_BASE}${ID}-13102026.jpeg`,
+      omitida: false
+    });
+    expect(clon.catalog.items["IMG-" + oreo].url).toBe(`${URL_BASE}${ID}-13102026.jpeg`);
+    expect(json.catalog.items["IMG-" + oreo].url).toBe(`${URL_BASE}${ID}.jpeg`);
+  });
+
+  test("sin URL previa usa el UUID del producto y no modifica el JSON", () => {
+    const json = JSON.parse(cargar());
+    const { clon, entradas } = C.aplicarImagenes(C.PEYA, json, ["p3"], "13102026");
+
+    expect(entradas[0].archivoBase).toBe("p3.jpeg");
+    expect(entradas[0].archivoFecha).toBe("p3-13102026.jpeg");
+    expect(entradas[0].urlNueva).toBe("");
+    expect(entradas[0].avisos).toHaveLength(1);
+    expect(clon).toEqual(json);
+  });
+
+  test("dos productos con la misma imagen: el segundo no se exporta", () => {
+    const json = JSON.parse(cargar());
+    const oreo = "ef0c4464-5968-46fc-9693-579c1878f91b";
+    const brownie = "f8dc512b-ebbf-41ed-bc39-5adf6da7bc49";
+    json.catalog.items["IMG-" + oreo].url = `${URL_BASE}${ID}.jpeg`;
+    json.catalog.items["IMG-" + brownie].url = `${URL_BASE}${ID}.jpeg`;
+
+    const { entradas } = C.aplicarImagenes(C.PEYA, json, [oreo, brownie], "13102026");
+
+    expect(entradas.map((e) => e.omitida)).toEqual([false, true]);
+  });
+
+  test("Rappi y Uber: escriben en el campo de imagen que ya existe (imagen_url / imageURL)", () => {
+    const rappi = JSON.parse(cargarFixture("rappi-muestra.json"));
+    rappi.items[0].imagen_url = `${URL_BASE}${ID}.jpeg`;
+    const r = C.aplicarImagenes(C.RAPPI, rappi, ["S1"], "13102026");
+    expect(r.entradas[0].archivoFecha).toBe(`${ID}-13102026.jpeg`);
+    expect(r.clon.items[0].imagen_url).toBe(`${URL_BASE}${ID}-13102026.jpeg`);
+
+    const uber = JSON.parse(cargarFixture("uber-muestra.json"));
+    uber.items[0].imageURL = `${URL_BASE}${ID}.jpeg`;
+    const u = C.aplicarImagenes(C.UBER, uber, ["I1"], "13102026");
+    expect(u.clon.items[0].imageURL).toBe(`${URL_BASE}${ID}-13102026.jpeg`);
+  });
+
+  test("diffDetalle informa el cambio de imagen", () => {
+    const json = JSON.parse(cargar());
+    const oreo = "ef0c4464-5968-46fc-9693-579c1878f91b";
+    json.catalog.items["IMG-" + oreo].url = `${URL_BASE}${ID}.jpeg`;
+    const { clon } = C.aplicarImagenes(C.PEYA, json, [oreo], "13102026");
+
+    const imagen = C.diffDetalle(C.PEYA, json, clon).find((d) => d.tipo === "imagen");
+
+    expect(imagen).toMatchObject({ uid: oreo, antes: `${URL_BASE}${ID}.jpeg`, despues: `${URL_BASE}${ID}-13102026.jpeg` });
+    expect(imagen.texto).toContain(`${ID}.jpeg → ${ID}-13102026.jpeg`);
+  });
+});

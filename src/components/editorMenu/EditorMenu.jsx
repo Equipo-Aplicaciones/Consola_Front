@@ -440,11 +440,11 @@ export default function EditorMenu({ token }) {
   const exportarArchivos = async (guardada) => {
     const s = store.current;
     const contenido = s.contenido;
-    descargar(new Blob([contenido], { type: "application/json;charset=utf-8" }), s.fileName);
-
     const aviso = sinIdentificar.length;
 
+    // Sin imágenes nuevas se descarga solo el JSON; con imágenes, el JSON viaja dentro del .zip.
     if (!imgs.size) {
+      descargar(new Blob([contenido], { type: "application/json;charset=utf-8" }), s.fileName);
       avisar(
         aviso ? "warn" : "ok",
         <>Exportado{guardada ? " y guardado en el historial" : ""}: <b>{s.fileName}</b>{aviso ? " · ⚠ hay imágenes sin identificar que no se exportaron" : ""}.</>
@@ -452,7 +452,7 @@ export default function EditorMenu({ token }) {
       return;
     }
 
-    const archivos = [];
+    const archivos = [{ name: s.fileName, data: new TextEncoder().encode(contenido) }];
     const filas = [[
       "uuid", "producto", "categoria", "url_anterior", "url_nueva", "archivo", "archivo_con_fecha",
       "archivo_original", "tamano_original", "avisos"
@@ -485,13 +485,12 @@ export default function EditorMenu({ token }) {
     archivos.push({ name: "imagenes.csv", data: new TextEncoder().encode(csv) });
 
     const nombreZip = `${s.baseName}-imagenes-${s.marca}.zip`;
-    setTimeout(() => descargar(new Blob([makeZip(archivos)], { type: "application/zip" }), nombreZip), 400);
+    descargar(new Blob([makeZip(archivos)], { type: "application/zip" }), nombreZip);
 
     avisar(
       aviso || omitidas || sinUrl ? "warn" : "ok",
       <>
-        Exportado{guardada ? " y guardado en el historial" : ""}: <b>{s.fileName}</b> + <b>{nombreZip}</b> ({imgs.size} imagen(es) JPEG {IMG_W}×{IMG_H}, cada una con y sin fecha en el nombre). Si el
-        navegador pregunta por descargas múltiples, elige Permitir.
+        Exportado{guardada ? " y guardado en el historial" : ""}: <b>{nombreZip}</b> (incluye el JSON editado <b>{s.fileName}</b> y {imgs.size} imagen(es) JPEG {IMG_W}×{IMG_H}, cada una con y sin fecha en el nombre).
         {omitidas ? ` ⚠ ${omitidas} imagen(es) no se exportaron por compartir la misma imagen con otro producto.` : ""}
         {sinUrl ? ` ⚠ ${sinUrl} producto(s) sin URL de imagen en el JSON: se usó su UUID y el JSON no se modificó.` : ""}
         {aviso ? " ⚠ Hay imágenes sin identificar que no se exportaron." : ""}

@@ -2,8 +2,11 @@ import fs from "fs";
 import path from "path";
 import * as C from "./core";
 
-const cargar = () =>
-  fs.readFileSync(path.join(__dirname, "__fixtures__", "peya-muestra.json"), "utf8");
+// Git en Windows puede entregar los fixtures con CRLF; el serializador siempre genera LF.
+const leer = (nombre) =>
+  fs.readFileSync(path.join(__dirname, "__fixtures__", nombre), "utf8").replace(/\r\n/g, "\n");
+
+const cargar = () => leer("peya-muestra.json");
 
 test("detecta PedidosYa", () => {
   expect(C.detectAdapter(JSON.parse(cargar())).name).toBe("PedidosYa");
@@ -47,8 +50,7 @@ test("cambiar precio conserva el tipo texto de PeYa", () => {
   expect(json.catalog.items.p3.price).toBe("7990");
 });
 
-const cargarFixture = (nombre) =>
-  fs.readFileSync(path.join(__dirname, "__fixtures__", nombre), "utf8");
+const cargarFixture = leer;
 
 describe("Rappi", () => {
   test("detecta el formato y exporta sin cambios idéntico, conservando los .0", () => {
@@ -131,5 +133,24 @@ describe("diffDetalle", () => {
     const json = JSON.parse(cargarFixture("uber-muestra.json"));
 
     expect(C.diffDetalle(C.UBER, json, JSON.parse(JSON.stringify(json)))).toEqual([]);
+  });
+});
+
+describe("nombres de archivo exportado", () => {
+  test("nombreBase quita los sufijos acumulados de exportaciones anteriores", () => {
+    expect(C.nombreBase("pyapi-ta-ma-menu-071026-editado-editado (1)-editado.json")).toBe("pyapi-ta-ma-menu-071026");
+    expect(C.nombreBase("menu-editado-20261013-1124.json")).toBe("menu");
+    expect(C.nombreBase("menu-editado-20261013-1124 (2).json")).toBe("menu");
+    expect(C.nombreBase("menu (3).JSON")).toBe("menu");
+  });
+
+  test("nombreBase conserva nombres normales aunque contengan la palabra editado", () => {
+    expect(C.nombreBase("menu.json")).toBe("menu");
+    expect(C.nombreBase("mi-editado-menu.json")).toBe("mi-editado-menu");
+    expect(C.nombreBase("")).toBe("menu");
+  });
+
+  test("marcaTiempo entrega AAAAMMDD-HHmm en hora local", () => {
+    expect(C.marcaTiempo(new Date(2026, 9, 13, 9, 5))).toBe("20261013-0905");
   });
 });

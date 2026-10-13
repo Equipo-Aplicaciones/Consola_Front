@@ -439,9 +439,7 @@ export default function EditorMenu({ token }) {
     }
 
     const productos = new Map(allProducts(adapter, data).map((p) => [p.uid, p]));
-    // El JSON también va dentro del .zip: así el paquete queda completo aunque el navegador
-    // bloquee una de las descargas múltiples.
-    const archivos = [{ name: s.fileName, data: new TextEncoder().encode(contenido) }];
+    const archivos = [];
     const filas = [["uuid", "producto", "categoria", "archivo", "archivo_original", "tamano_original", "avisos"]];
 
     for (const [uid, im] of imgs) {
@@ -463,8 +461,8 @@ export default function EditorMenu({ token }) {
     avisar(
       aviso ? "warn" : "ok",
       <>
-        Exportado{guardada ? " y guardado en el historial" : ""}: <b>{s.fileName}</b> + <b>{nombreZip}</b> ({imgs.size} imagen(es) JPG {IMG_W}×{IMG_H}; el
-        .zip incluye también el JSON). Si el navegador pregunta por descargas múltiples, elige Permitir.
+        Exportado{guardada ? " y guardado en el historial" : ""}: <b>{s.fileName}</b> + <b>{nombreZip}</b> ({imgs.size} imagen(es) JPG {IMG_W}×{IMG_H}). Si el
+        navegador pregunta por descargas múltiples, elige Permitir.
         {aviso ? " ⚠ Hay imágenes sin identificar que no se exportaron." : ""}
       </>
     );

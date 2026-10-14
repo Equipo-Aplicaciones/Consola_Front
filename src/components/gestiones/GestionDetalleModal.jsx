@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Modal, Button, Form, Badge, Table, Collapse } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
+import FiltroEstados from "./FiltroEstados";
 import GestionInstructivos from "./GestionInstructivos";
 
 export default function GestionDetalleModal({ show, onClose, gestionId, token, refresh }) {
@@ -10,7 +11,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   const [guardandoLocal, setGuardandoLocal] = useState(null);
   const [accionando, setAccionando] = useState(false);
   const [error, setError] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("");
+  const [filtroEstados, setFiltroEstados] = useState([]);
   const [seleccionados, setSeleccionados] = useState([]);
   const [estadoMasivo, setEstadoMasivo] = useState("");
   const [comentarioMasivo, setComentarioMasivo] = useState("");
@@ -98,7 +99,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
     setError("");
     setMotivo("");
     setConfirmando(null);
-    setFiltroEstado("");
+    setFiltroEstados([]);
     setSeleccionados([]);
     setEstadoMasivo("");
     setComentarioMasivo("");
@@ -141,12 +142,12 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   const localesFiltrados = useMemo(() => {
     const locales = gestion?.locales || [];
 
-    if (!filtroEstado) return locales;
+    if (!filtroEstados.length) return locales;
 
     return locales.filter(
-      local => local.estado_codigo === filtroEstado
+      local => filtroEstados.includes(local.estado_codigo)
     );
-  }, [gestion, filtroEstado]);
+  }, [gestion, filtroEstados]);
 
   const todosSeleccionados = useMemo(() => {
     if (!localesFiltrados.length) return false;
@@ -908,29 +909,24 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
 
             {/* FILTRO + ACCIONES MASIVAS */}
             <div className="d-flex flex-wrap align-items-center justify-content-start gap-2 mb-2">
-              <div className="d-flex flex-wrap align-items-center gap-2" style={{ width: "450px" }}>
-                <Form.Select size="sm" value={filtroEstado}
-                  onChange={e => setFiltroEstado(e.target.value) }
-                  style={{ width: "180px" }} >
-                  <option value="">
-                    Todos los estados
-                  </option>
-
-                  {estadosLocales.map(estado => (
-                    <option key={estado.id} value={estado.codigo} >
-                      {estado.nombre}
-                    </option>
-                  ))}
-                </Form.Select>
+              <div className="d-flex flex-wrap align-items-center gap-2" style={{ maxWidth: "560px" }}>
+                <div style={{ width: "260px" }}>
+                  <FiltroEstados
+                    compacto
+                    estados={estadosLocales}
+                    value={filtroEstados}
+                    onChange={setFiltroEstados}
+                  />
+                </div>
 
                 <span className="text-muted small text-nowrap">
                   {localesFiltrados.length} de {resumen.total} locales
                 </span>
 
-                {filtroEstado && (
+                {filtroEstados.length > 0 && (
                   <Button type="button" size="sm" variant="outline-secondary"
                     onClick={() =>
-                      setFiltroEstado("") }
+                      setFiltroEstados([]) }
                     title="Limpiar filtro" >
                     <i className="bi bi-x-lg" />
                   </Button>

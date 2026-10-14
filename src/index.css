@@ -262,3 +262,8 @@ h2 {
 
 }
 
+
+/* El detalle de gestión mantiene siempre el mismo alto, se muestren o no sus detalles */
+.gestion-detalle-content {
+  min-height: min(calc(100vh - 3.5rem), 720px);
+}

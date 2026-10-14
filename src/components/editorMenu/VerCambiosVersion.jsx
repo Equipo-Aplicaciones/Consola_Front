@@ -5,6 +5,7 @@ import { detectAdapter } from "./core";
 import Miniatura from "./Miniatura";
 
 const dinero = (n) => "$" + Number(n || 0).toLocaleString("es-CL");
+const nombreArchivo = (url) => String(url || "").split(/[?#]/)[0].split("/").pop();
 
 export default function VerCambiosVersion({ version, token, fecha, onCerrar }) {
   const [detalle, setDetalle] = useState(null);
@@ -112,6 +113,7 @@ export default function VerCambiosVersion({ version, token, fecha, onCerrar }) {
     const descripcion = entradas.find((x) => x.tipo === "descripcion");
     const orden = entradas.find((x) => x.tipo === "orden" && x.catId === categoria.id);
     const movido = entradas.find((x) => x.tipo === "movido" && x.despuesIds.includes(categoria.id));
+    const imagen = entradas.find((x) => x.tipo === "imagen");
 
     return (
       <div className={`em-vprod ${entradas.length ? "cambiado" : ""}`} key={`${p.key}-${p.uid}`}>
@@ -130,9 +132,14 @@ export default function VerCambiosVersion({ version, token, fecha, onCerrar }) {
             <div className="em-pdesc">{p.desc}</div>
           )}
 
-          {(movido || orden) && (
+          {(movido || orden || imagen) && (
             <div className="mt-1 d-flex gap-1 flex-wrap">
               {movido && <span className="em-chip">Movido desde: {movido.antes}</span>}
+              {imagen && (
+                <span className="em-chip" title={imagen.despues}>
+                  Imagen: {nombreArchivo(imagen.antes) || "(sin imagen)"} → {nombreArchivo(imagen.despues)}
+                </span>
+              )}
               {orden && (
                 <span className="em-chip">
                   Orden {orden.antes ?? "—"} → {orden.despues ?? "—"}

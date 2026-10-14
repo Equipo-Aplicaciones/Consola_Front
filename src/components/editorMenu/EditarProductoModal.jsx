@@ -1,13 +1,13 @@
 import { useRef, useState } from "react";
 import { Button, Form, Modal } from "react-bootstrap";
 import Miniatura from "./Miniatura";
-import { safeFile } from "./core";
 
 export default function EditarProductoModal({
   producto,
   categorias,
   imagenNueva,
   nota,
+  nombresImagen,
   onGuardar,
   onCerrar,
   onImagen,
@@ -70,7 +70,7 @@ export default function EditarProductoModal({
 
             {imagenNueva && (
               <div className="small text-warning-emphasis mt-2">
-                Nueva: {imagenNueva.src} → <b>{safeFile(producto.uid)}.jpg</b>
+                Nueva: {imagenNueva.src} → <b>{nombresImagen}</b>
                 {imagenNueva.warn.map((w) => (
                   <div key={w}>⚠ {w}</div>
                 ))}

@@ -3,12 +3,15 @@ import { Button } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 import {
   allProducts,
+  aplicarImagenes,
   detectAdapter,
   detectFloatKeys,
   detectIndent,
   diff,
   diffDetalle,
+  idDeImagen,
   makeZip,
+  marcaFecha,
   marcaTiempo,
   matchImage,
   nombreBase,
@@ -46,6 +49,9 @@ export default function EditorMenu({ token }) {
     fileName: "menu-editado.json",
     baseName: "menu",
     marca: "",
+    plan: null, // { clon, entradas } con las imágenes y la copia del JSON a exportar
+    contenido: "",
+    detalle: [],
     history: [],
     imgs: new Map(), // uid -> {blob,url,src,w,h,warn}
     sinIdentificar: [] // [{blob,url,src,w,h,warn}]
@@ -86,6 +92,11 @@ export default function EditorMenu({ token }) {
     const t = setTimeout(() => setDestacada(null), 1500);
     return () => clearTimeout(t);
   }, [destacada]);
+
+  const nombresDeImagen = (producto) => {
+    const id = idDeImagen(producto?.image) || safeFile(producto?.uid ?? "");
+    return `${id}.jpeg + ${id}-${marcaFecha(new Date())}.jpeg`;
+  };
 
   const avisar = (tipo, contenido) => setMensaje({ tipo, contenido });
   const snap = () => {
@@ -370,8 +381,12 @@ export default function EditorMenu({ token }) {
   /* ---------- Exportar ---------- */
   const abrirExportacion = () => {
     const s = store.current;
-    s.marca = marcaTiempo(new Date());
+    const ahora = new Date();
+    s.marca = marcaTiempo(ahora);
     s.fileName = `${s.baseName}-editado-${s.marca}.json`;
+    s.plan = aplicarImagenes(adapter, data, [...imgs.keys()], marcaFecha(ahora));
+    s.contenido = serialize(s.plan.clon, s.indent, s.floatKeys);
+    s.detalle = diffDetalle(adapter, original, s.plan.clon);
     setErrorVersion("");
     setExportando(true);
   };
@@ -385,14 +400,13 @@ export default function EditorMenu({ token }) {
     const formulario = new FormData();
     formulario.append(
       "file",
-      new Blob([serialize(data, s.indent, s.floatKeys)], { type: "application/json" }),
+      new Blob([s.contenido], { type: "application/json" }),
       s.fileName
     );
     formulario.append("descripcion", descripcion);
     formulario.append("agregador", adapter.name);
-    const detalle = diffDetalle(adapter, original, data);
-    formulario.append("cambios", JSON.stringify(detalle.map((d) => d.texto)));
-    formulario.append("cambios_detalle", JSON.stringify(detalle.map(({ texto, ...resto }) => resto)));
+    formulario.append("cambios", JSON.stringify(s.detalle.map((d) => d.texto)));
+    formulario.append("cambios_detalle", JSON.stringify(s.detalle.map(({ texto, ...resto }) => resto)));
     formulario.append("cantidad_imagenes", String(imgs.size));
 
     setGuardandoVersion(true);
@@ -425,12 +439,12 @@ export default function EditorMenu({ token }) {
 
   const exportarArchivos = async (guardada) => {
     const s = store.current;
-    const contenido = serialize(data, s.indent, s.floatKeys);
-    descargar(new Blob([contenido], { type: "application/json;charset=utf-8" }), s.fileName);
-
+    const contenido = s.contenido;
     const aviso = sinIdentificar.length;
 
+    // Sin imágenes nuevas se descarga solo el JSON; con imágenes, el JSON viaja dentro del .zip.
     if (!imgs.size) {
+      descargar(new Blob([contenido], { type: "application/json;charset=utf-8" }), s.fileName);
       avisar(
         aviso ? "warn" : "ok",
         <>Exportado{guardada ? " y guardado en el historial" : ""}: <b>{s.fileName}</b>{aviso ? " · ⚠ hay imágenes sin identificar que no se exportaron" : ""}.</>
@@ -438,16 +452,31 @@ export default function EditorMenu({ token }) {
       return;
     }
 
-    const productos = new Map(allProducts(adapter, data).map((p) => [p.uid, p]));
-    const archivos = [];
-    const filas = [["uuid", "producto", "categoria", "archivo", "archivo_original", "tamano_original", "avisos"]];
+    const archivos = [{ name: s.fileName, data: new TextEncoder().encode(contenido) }];
+    const filas = [[
+      "uuid", "producto", "categoria", "url_anterior", "url_nueva", "archivo", "archivo_con_fecha",
+      "archivo_original", "tamano_original", "avisos"
+    ]];
+    let omitidas = 0;
+    let sinUrl = 0;
 
-    for (const [uid, im] of imgs) {
-      const p = productos.get(uid) || { name: "", catName: "" };
-      const nombre = safeFile(uid) + ".jpg";
+    for (const e of s.plan.entradas) {
+      const im = imgs.get(e.uid);
+      const avisosImagen = [...e.avisos, ...(im ? im.warn : [])];
 
-      archivos.push({ name: nombre, data: new Uint8Array(await im.blob.arrayBuffer()) });
-      filas.push([uid, p.name, p.catName, nombre, im.src, `${im.w}x${im.h}`, im.warn.join(" | ")]);
+      if (e.omitida) {
+        omitidas++;
+        filas.push([e.uid, e.producto, e.categoria, e.urlAnterior, "", "", "", im?.src ?? "", im ? `${im.w}x${im.h}` : "", "NO EXPORTADA: " + avisosImagen.join(" | ")]);
+        continue;
+      }
+
+      if (!e.urlNueva) sinUrl++;
+
+      // La misma imagen se entrega con el nombre actual (reemplaza la original) y con la fecha (la que usa el JSON).
+      const bytes = new Uint8Array(await im.blob.arrayBuffer());
+      archivos.push({ name: e.archivoBase, data: bytes });
+      archivos.push({ name: e.archivoFecha, data: bytes });
+      filas.push([e.uid, e.producto, e.categoria, e.urlAnterior, e.urlNueva, e.archivoBase, e.archivoFecha, im.src, `${im.w}x${im.h}`, avisosImagen.join(" | ")]);
     }
 
     const csv =
@@ -456,13 +485,14 @@ export default function EditorMenu({ token }) {
     archivos.push({ name: "imagenes.csv", data: new TextEncoder().encode(csv) });
 
     const nombreZip = `${s.baseName}-imagenes-${s.marca}.zip`;
-    setTimeout(() => descargar(new Blob([makeZip(archivos)], { type: "application/zip" }), nombreZip), 400);
+    descargar(new Blob([makeZip(archivos)], { type: "application/zip" }), nombreZip);
 
     avisar(
-      aviso ? "warn" : "ok",
+      aviso || omitidas || sinUrl ? "warn" : "ok",
       <>
-        Exportado{guardada ? " y guardado en el historial" : ""}: <b>{s.fileName}</b> + <b>{nombreZip}</b> ({imgs.size} imagen(es) JPG {IMG_W}×{IMG_H}). Si el
-        navegador pregunta por descargas múltiples, elige Permitir.
+        Exportado{guardada ? " y guardado en el historial" : ""}: <b>{nombreZip}</b> (incluye el JSON editado <b>{s.fileName}</b> y {imgs.size} imagen(es) JPEG {IMG_W}×{IMG_H}, cada una con y sin fecha en el nombre).
+        {omitidas ? ` ⚠ ${omitidas} imagen(es) no se exportaron por compartir la misma imagen con otro producto.` : ""}
+        {sinUrl ? ` ⚠ ${sinUrl} producto(s) sin URL de imagen en el JSON: se usó su UUID y el JSON no se modificó.` : ""}
         {aviso ? " ⚠ Hay imágenes sin identificar que no se exportaron." : ""}
       </>
     );
@@ -787,7 +817,7 @@ export default function EditorMenu({ token }) {
                 <div>
                   <b>{productosPorUid.get(uid)?.name ?? "(no existe en el menú)"}</b>
                   <div className="em-fn">
-                    {im.src} → {safeFile(uid)}.jpg
+                    {im.src} → {nombresDeImagen(productosPorUid.get(uid) || { uid })}
                   </div>
                   {im.warn.map((w) => (
                     <div className="em-aviso" key={w}>
@@ -861,6 +891,7 @@ export default function EditorMenu({ token }) {
           categorias={opcionesCategoria(editando.catId)}
           imagenNueva={imagenDeEdicion}
           nota={notaEdicion}
+          nombresImagen={nombresDeImagen(editando)}
           onGuardar={guardarProducto}
           onCerrar={() => setEditando(null)}
           onImagen={imagenDesdeModal}
@@ -870,7 +901,7 @@ export default function EditorMenu({ token }) {
 
       {exportando && (
         <ExportarVersionModal
-          cantidadCambios={diff(adapter, original, data).length}
+          cantidadCambios={store.current.detalle.length}
           cantidadImagenes={imgs.size}
           nombreArchivo={store.current.fileName}
           guardando={guardandoVersion}

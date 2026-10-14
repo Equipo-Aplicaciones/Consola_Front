@@ -82,13 +82,12 @@ function QueryExecutor({ token }) {
     }
   };
 
-  // 🔹 Filtro por código o descripción
+  // 🔹 Filtro por código, artículo (Descrip) u observación (Observac)
   useEffect(() => {
-    const term = searchTerm.toLowerCase();
+    const term = searchTerm.trim().toLowerCase();
+    const contiene = (valor) => String(valor ?? "").toLowerCase().includes(term);
     const filteredData = articulos.filter(
-      (a) =>
-        a.Codigo.toString().toLowerCase().includes(term) ||
-        (a.Descrip && a.Observac.toLowerCase().includes(term))
+      (a) => contiene(a.Codigo) || contiene(a.Descrip) || contiene(a.Observac)
     );
     setFiltered(filteredData);
     setCurrentPage(1);
@@ -174,7 +173,7 @@ function QueryExecutor({ token }) {
 
       {/* 🔹 Campo de búsqueda */}
       <div className="mb-3">
-        <input type="text" placeholder="Buscar por código o descripción..."
+        <input type="text" placeholder="Buscar por código, artículo o descripción..."
           className="form-control" value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           disabled={!isConnected} />

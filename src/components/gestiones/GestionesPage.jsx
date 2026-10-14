@@ -3,6 +3,9 @@ import { Modal, Button } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 import GestionModal from "./GestionModal";
 import GestionDetalleModal from "./GestionDetalleModal";
+import FiltroEstados from "./FiltroEstados";
+
+const ESTADOS_OCULTOS_POR_DEFECTO = ["FINALIZADA", "CANCELADA"];
 
 export default function GestionesPage({ token }) {
   const [gestiones, setGestiones] = useState([]);
@@ -10,7 +13,7 @@ export default function GestionesPage({ token }) {
   const [empresas, setEmpresas] = useState([]);
   const [search, setSearch] = useState("");
   const [showFiltrosMobile, setShowFiltrosMobile] = useState(false);
-  const [estado, setEstado] = useState("");
+  const [estadosSel, setEstadosSel] = useState([]);
   const [empresa, setEmpresa] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -108,6 +111,8 @@ export default function GestionesPage({ token }) {
      GESTIONES
   ===================================================== */
 
+  const estadoParam = estadosSel.join(",");
+
   const cargarGestiones = useCallback(async () => {
     if (!token) return;
 
@@ -124,11 +129,8 @@ export default function GestionesPage({ token }) {
         );
       }
 
-      if (estado) {
-        params.append(
-          "estado",
-          estado
-        );
+      if (estadoParam) {
+        params.append("estado", estadoParam);
       }
 
       if (empresa) {
@@ -188,7 +190,7 @@ export default function GestionesPage({ token }) {
   }, [
     token,
     search,
-    estado,
+    estadoParam,
     empresa
   ]);
 
@@ -249,19 +251,20 @@ export default function GestionesPage({ token }) {
 
   const filtrosActivos = useMemo(
     () =>
-      [search.trim(), empresa, estado].filter(Boolean).length,
-    [search, empresa, estado]
+      [search.trim(), empresa].filter(Boolean).length + (estadosSel.length ? 1 : 0),
+    [search, empresa, estadosSel]
   );
 
-  // Las finalizadas solo se muestran si el filtro de estado las pidió
-  // explícitamente; con "Todos los estados" u otro estado puntual, quedan
-  // afuera para no ensuciar el listado.
+  // Las finalizadas y las canceladas solo se muestran si el filtro de estados
+  // las incluye explícitamente; así no ensucian el listado habitual.
   const gestionesVisibles = useMemo(
     () =>
-      estado === "FINALIZADA"
-        ? gestiones
-        : gestiones.filter(x => x.estado_codigo !== "FINALIZADA"),
-    [gestiones, estado]
+      gestiones.filter(
+        x =>
+          !ESTADOS_OCULTOS_POR_DEFECTO.includes(x.estado_codigo) ||
+          estadosSel.includes(x.estado_codigo)
+      ),
+    [gestiones, estadosSel]
   );
 
   /* =====================================================
@@ -494,30 +497,17 @@ export default function GestionesPage({ token }) {
             </div>
 
             <div className="col-12 col-md-6 col-lg-3">
-              <select
-                className="form-select"
-                value={estado}
-                onChange={e =>
-                  setEstado(
-                    e.target.value
-                  )
-                }
-              >
-                <option value="">
-                  Todos los estados
-                </option>
-
-                {estados.map(item => (
-                  <option
-                    key={item.id}
-                    value={item.codigo}
-                  >
-                    {item.nombre}
-                  </option>
-                ))}
-              </select>
+              <FiltroEstados
+                estados={estados}
+                value={estadosSel}
+                onChange={setEstadosSel}
+              />
             </div>
 
+          </div>
+
+          <div className="text-muted small mb-2 d-none d-md-block">
+            Las gestiones Finalizadas y Canceladas se muestran solo si las incluye en el filtro de estados.
           </div>
 
           {/* =========================
@@ -556,12 +546,12 @@ export default function GestionesPage({ token }) {
           ) : gestionesVisibles.length === 0 ? (
 
             <div className="text-center text-muted py-5">
-              Todas las gestiones de este filtro están finalizadas.{" "}
+              Todas las gestiones de este filtro están finalizadas o canceladas.{" "}
               <button
                 className="btn btn-link p-0 align-baseline"
-                onClick={() => setEstado("FINALIZADA")}
+                onClick={() => setEstadosSel(ESTADOS_OCULTOS_POR_DEFECTO)}
               >
-                Ver finalizadas
+                Ver finalizadas y canceladas
               </button>
             </div>
 
@@ -750,18 +740,15 @@ export default function GestionesPage({ token }) {
             ))}
           </select>
 
-          <select
-            className="form-select"
-            value={estado}
-            onChange={e => setEstado(e.target.value)}
-          >
-            <option value="">Todos los estados</option>
-            {estados.map(item => (
-              <option key={item.id} value={item.codigo}>
-                {item.nombre}
-              </option>
-            ))}
-          </select>
+          <FiltroEstados
+            estados={estados}
+            value={estadosSel}
+            onChange={setEstadosSel}
+          />
+
+          <div className="text-muted small mt-2">
+            Las gestiones Finalizadas y Canceladas se muestran solo si las incluye en el filtro de estados.
+          </div>
         </Modal.Body>
         <Modal.Footer>
           <Button
@@ -769,7 +756,7 @@ export default function GestionesPage({ token }) {
             onClick={() => {
               setSearch("");
               setEmpresa("");
-              setEstado("");
+              setEstadosSel([]);
             }}
           >
             Limpiar filtros

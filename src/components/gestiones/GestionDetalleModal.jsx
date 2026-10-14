@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, Button, Form, Badge, Table, Collapse } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 import FiltroEstados from "./FiltroEstados";
@@ -28,9 +28,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   });
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [errorEdicion, setErrorEdicion] = useState("");
-  const [compactado, setCompactado] = useState(false);
-  const tablaRef = useRef(null);
-  const bloqueRef = useRef(null);
+  const [detallesAbiertos, setDetallesAbiertos] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
   const role = user.role;
@@ -105,7 +103,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
     setComentarioMasivo("");
     setEditando(false);
     setErrorEdicion("");
-    setCompactado(false);
+    setDetallesAbiertos(false);
     cargarEstados();
     cargarGestion();
   }, [show, cargarEstados, cargarGestion]);
@@ -623,41 +621,8 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
     );
   };
 
-  const compacto = compactado && !editando;
-
-  // Se compacta solo si, tras ocultar el bloque, la tabla seguiría pudiendo
-  // hacer scroll; si no, el scrollTop se corregiría a 0 y volvería a expandirse en bucle.
-  const onScrollTabla = e => {
-    const el = e.currentTarget;
-
-    if (el.scrollTop <= 0) {
-      if (compactado) setCompactado(false);
-      return;
-    }
-
-    if (!compactado && el.scrollTop > 20) {
-      const sobrante = el.scrollHeight - el.clientHeight;
-      const altoBloque = bloqueRef.current?.offsetHeight || 0;
-
-      if (sobrante > altoBloque + 40) {
-        // Se fija el alto actual del modal: al ocultar el bloque, la tabla ocupa el espacio
-        // liberado y la ventana no cambia de tamaño.
-        const contenido = el.closest(".modal-content");
-        if (contenido) contenido.style.minHeight = `${contenido.offsetHeight}px`;
-
-        setCompactado(true);
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (compactado) return undefined;
-
-    const contenido = tablaRef.current?.closest(".modal-content");
-    if (contenido) contenido.style.minHeight = "";
-
-    return undefined;
-  }, [compactado]);
+  // Al editar, el bloque de detalles se mantiene abierto para no esconder los campos.
+  const detallesVisibles = detallesAbiertos || editando;
 
   const gestionBloqueada =
     gestion?.estado_codigo === "SUSPENDIDA" ||
@@ -671,6 +636,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
       size="xl"
       centered
       scrollable
+      contentClassName="gestion-detalle-content"
     >
       <Modal.Header closeButton>
         <Modal.Title>
@@ -695,11 +661,13 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
           </div>
         ) : (
           <>
-            {/* CABECERA: título y estado siempre visibles */}
-            <div className="d-flex justify-content-between align-items-start gap-3 mb-1">
-              <div className="flex-grow-1">
+            {/* CABECERA: nombre, resumen de estados y botón para mostrar/ocultar los detalles */}
+            <div className="d-flex align-items-center flex-wrap gap-2 mb-2">
+              <div className="d-flex align-items-center flex-wrap gap-2 flex-grow-1" style={{ minWidth: 0 }}>
                 {editando ? (
                   <Form.Control
+                    className="flex-grow-1"
+                    style={{ maxWidth: 420 }}
                     value={formEdicion.nombre}
                     onChange={e =>
                       setFormEdicion(prev => ({ ...prev, nombre: e.target.value }))
@@ -711,6 +679,28 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                     {gestion.nombre}
                   </h4>
                 )}
+
+                {/* RESUMEN DE ESTADOS */}
+                <div className="d-flex flex-wrap gap-1">
+                  <Badge bg="success">
+                    Terminados: {resumen.terminado}
+                  </Badge>
+
+                  <Badge
+                    bg="warning"
+                    text="dark"
+                  >
+                    Pendientes: {resumen.pendiente}
+                  </Badge>
+
+                  <Badge bg="danger">
+                    No aplicados: {resumen.noAplicado}
+                  </Badge>
+
+                  <Badge bg="secondary">
+                    No aplica: {resumen.noAplica}
+                  </Badge>
+                </div>
               </div>
 
               <Badge
@@ -719,12 +709,24 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
               >
                 {gestion.estado_nombre}
               </Badge>
+
+              {!editando && (
+                <Button
+                  size="sm"
+                  variant="outline-secondary"
+                  title={detallesAbiertos ? "Ocultar detalles" : "Mostrar detalles"}
+                  aria-expanded={detallesAbiertos}
+                  onClick={() => setDetallesAbiertos(v => !v)}
+                >
+                  <i className={`bi bi-chevron-${detallesAbiertos ? "up" : "down"}`} />
+                </Button>
+              )}
             </div>
 
-            {/* BLOQUE QUE SE OCULTA AL HACER SCROLL EN LA TABLA */}
-            <Collapse in={!compacto}>
+            {/* DETALLES (se muestran u ocultan con la flecha) */}
+            <Collapse in={detallesVisibles}>
               <div className="flex-shrink-0">
-              <div ref={bloqueRef}>
+              <div>
             <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
               <div className="flex-grow-1">
                 {editando ? (
@@ -883,27 +885,6 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
               </div>
             </div>
 
-            {/* RESUMEN DE ESTADOS */}
-            <div className="d-flex flex-wrap gap-2 mb-3">
-              <Badge bg="success">
-                Terminados: {resumen.terminado}
-              </Badge>
-
-              <Badge
-                bg="warning"
-                text="dark"
-              >
-                Pendientes: {resumen.pendiente}
-              </Badge>
-
-              <Badge bg="danger">
-                No aplicados: {resumen.noAplicado}
-              </Badge>
-
-              <Badge bg="secondary">
-                No aplica: {resumen.noAplica}
-              </Badge>
-            </div>
               </div>
               </div>
             </Collapse>
@@ -1033,8 +1014,6 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
             {/* TABLA DE LOCALES */}
             <div
               className="table-responsive tabla-gestion-locales"
-              ref={tablaRef}
-              onScroll={onScrollTabla}
               style={{ flex: "1 1 0", minHeight: 200, overflowY: "auto" }}
             >
               <Table

@@ -639,9 +639,25 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
       const sobrante = el.scrollHeight - el.clientHeight;
       const altoBloque = bloqueRef.current?.offsetHeight || 0;
 
-      if (sobrante > altoBloque + 40) setCompactado(true);
+      if (sobrante > altoBloque + 40) {
+        // Se fija el alto actual del modal: al ocultar el bloque, la tabla ocupa el espacio
+        // liberado y la ventana no cambia de tamaño.
+        const contenido = el.closest(".modal-content");
+        if (contenido) contenido.style.minHeight = `${contenido.offsetHeight}px`;
+
+        setCompactado(true);
+      }
     }
   };
+
+  useEffect(() => {
+    if (compactado) return undefined;
+
+    const contenido = tablaRef.current?.closest(".modal-content");
+    if (contenido) contenido.style.minHeight = "";
+
+    return undefined;
+  }, [compactado]);
 
   const gestionBloqueada =
     gestion?.estado_codigo === "SUSPENDIDA" ||

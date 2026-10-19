@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Dropdown } from "react-bootstrap";
+import { Collapse, Dropdown } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 import MobileActions from "../utils/MobileActions";
 import ConnectionDetalleModal from "./ConnectionDetalleModal";
@@ -38,7 +38,7 @@ function ConnectionsAdmin({ token }) {
   const [empresas, setEmpresas] = useState([]);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [showSearchMobile, setShowSearchMobile] = useState(false);
-  const [showFormMobile, setShowFormMobile] = useState(false);
+  const [showForm, setShowForm] = useState(false);
     
   
   // 🔥 OPCIONES EMPRESA
@@ -155,7 +155,7 @@ function ConnectionsAdmin({ token }) {
       );
 
       setForm(emptyForm);
-      setShowFormMobile(false);
+      setShowForm(false);
       cargar();
     } catch (err) {
       console.error(err);
@@ -165,7 +165,7 @@ function ConnectionsAdmin({ token }) {
 
   const editar = (row) => {
     setForm(row);
-    setShowFormMobile(true);
+    setShowForm(true);
   };
 
   const eliminar = async (id) => {
@@ -374,6 +374,17 @@ function ConnectionsAdmin({ token }) {
 
         <h5 className="mb-0 text-nowrap">Administrar Locales</h5>
 
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1 text-nowrap"
+          title={showForm ? "Ocultar formulario" : "Mostrar formulario para crear o editar locales"}
+          aria-expanded={showForm}
+          onClick={() => setShowForm(v => !v)}
+        >
+          Nuevo local
+          <i className={`bi bi-chevron-${showForm ? "up" : "down"}`}></i>
+        </button>
+
         <div className="d-flex align-items-center gap-2 ms-auto d-md-none" style={{ position: "relative", zIndex: 3 }}>
           <button
             type="button"
@@ -391,7 +402,7 @@ function ConnectionsAdmin({ token }) {
               title="Agregar local"
               onClick={() => {
                 setForm(emptyForm);
-                setShowFormMobile(true);
+                setShowForm(true);
               }}
             >
               <i className="bi bi-plus-lg"></i>
@@ -502,7 +513,9 @@ function ConnectionsAdmin({ token }) {
         </div>
       </div>
 
-      <div className={`card-body border-bottom ${showFormMobile ? "" : "d-none d-md-block"}`}>
+      <Collapse in={showForm}>
+      <div>
+      <div className="card-body border-bottom">
         <div className="row g-2">
 
           <div className="col-6 col-md-2">
@@ -635,7 +648,7 @@ function ConnectionsAdmin({ token }) {
                 <button className="btn btn-secondary"
                   onClick={() => {
                     setForm(emptyForm);
-                    setShowFormMobile(false);
+                    setShowForm(false);
                   }}>
                   Limpiar
                 </button>
@@ -645,6 +658,8 @@ function ConnectionsAdmin({ token }) {
 
         </div>
       </div>
+      </div>
+      </Collapse>
 
       <div className="table-responsive" style={{ maxHeight: 400, overflowY: "auto" }}>
         <table className="table table-sm table-hover mb-0">

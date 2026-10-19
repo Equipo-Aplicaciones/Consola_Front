@@ -376,13 +376,23 @@ function ConnectionsAdmin({ token }) {
 
         <button
           type="button"
-          className="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1 text-nowrap"
+          className={`btn btn-sm rounded-pill px-3 d-none d-md-inline-flex align-items-center gap-2 text-nowrap fw-semibold ${
+            showForm ? "btn-success" : "btn-outline-success"
+          }`}
           title={showForm ? "Ocultar formulario" : "Mostrar formulario para crear o editar locales"}
           aria-expanded={showForm}
           onClick={() => setShowForm(v => !v)}
         >
-          Nuevo local
-          <i className={`bi bi-chevron-${showForm ? "up" : "down"}`}></i>
+          <i className={`bi ${form.id ? "bi-pencil" : "bi-plus-lg"}`}></i>
+          {form.id ? "Editando local" : "Nuevo local"}
+          <i
+            className="bi bi-chevron-down"
+            style={{
+              fontSize: "0.75rem",
+              transition: "transform 0.2s ease",
+              transform: showForm ? "rotate(180deg)" : "none"
+            }}
+          ></i>
         </button>
 
         <div className="d-flex align-items-center gap-2 ms-auto d-md-none" style={{ position: "relative", zIndex: 3 }}>

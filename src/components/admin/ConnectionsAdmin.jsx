@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Dropdown } from "react-bootstrap";
+import { Collapse, Dropdown } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 import MobileActions from "../utils/MobileActions";
 import ConnectionDetalleModal from "./ConnectionDetalleModal";
@@ -38,7 +38,7 @@ function ConnectionsAdmin({ token }) {
   const [empresas, setEmpresas] = useState([]);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [showSearchMobile, setShowSearchMobile] = useState(false);
-  const [showFormMobile, setShowFormMobile] = useState(false);
+  const [showForm, setShowForm] = useState(false);
     
   
   // 🔥 OPCIONES EMPRESA
@@ -155,7 +155,7 @@ function ConnectionsAdmin({ token }) {
       );
 
       setForm(emptyForm);
-      setShowFormMobile(false);
+      setShowForm(false);
       cargar();
     } catch (err) {
       console.error(err);
@@ -165,7 +165,7 @@ function ConnectionsAdmin({ token }) {
 
   const editar = (row) => {
     setForm(row);
-    setShowFormMobile(true);
+    setShowForm(true);
   };
 
   const eliminar = async (id) => {
@@ -391,7 +391,7 @@ function ConnectionsAdmin({ token }) {
               title="Agregar local"
               onClick={() => {
                 setForm(emptyForm);
-                setShowFormMobile(true);
+                setShowForm(true);
               }}
             >
               <i className="bi bi-plus-lg"></i>
@@ -400,6 +400,25 @@ function ConnectionsAdmin({ token }) {
         </div>
 
         <div className="d-none d-md-flex align-items-center gap-2 ms-md-auto flex-wrap">
+          <button
+            type="button"
+            className="btn btn-success d-none d-md-inline-flex align-items-center gap-2 text-nowrap"
+            title={showForm ? "Ocultar formulario" : "Mostrar formulario para crear o editar locales"}
+            aria-expanded={showForm}
+            onClick={() => setShowForm(v => !v)}
+          >
+            <i className={`bi ${form.id ? "bi-pencil" : "bi-plus-lg"}`}></i>
+            {form.id ? "Editando" : "Nuevo"}
+            <i
+              className="bi bi-chevron-down"
+              style={{
+                fontSize: "0.75rem",
+                transition: "transform 0.2s ease",
+                transform: showForm ? "rotate(180deg)" : "none"
+              }}
+            ></i>
+          </button>
+
           <input
             className="form-control"
             style={{ width: 150 }}
@@ -502,7 +521,9 @@ function ConnectionsAdmin({ token }) {
         </div>
       </div>
 
-      <div className={`card-body border-bottom ${showFormMobile ? "" : "d-none d-md-block"}`}>
+      <Collapse in={showForm}>
+      <div>
+      <div className="card-body border-bottom">
         <div className="row g-2">
 
           <div className="col-6 col-md-2">
@@ -530,7 +551,7 @@ function ConnectionsAdmin({ token }) {
             </select>
           </div>
 
-          <div className="col-12 col-md-2">
+          <div className="col-12 col-md-4">
             <Select
               placeholder="Seleccione Rut"
               isClearable
@@ -552,6 +573,12 @@ function ConnectionsAdmin({ token }) {
                 menuPortal: base => ({
                   ...base,
                   zIndex: 9999
+                }),
+                menu: base => ({
+                  ...base,
+                  width: "max-content",
+                  minWidth: "100%",
+                  maxWidth: "calc(100vw - 32px)"
                 })
               }}
               onChange={(opt) => {
@@ -575,8 +602,8 @@ function ConnectionsAdmin({ token }) {
           </div>
 
           <div className="col-12">
-            <div className="row g-2">
-              <div className="col-sm-3">
+            <div className="d-flex flex-wrap align-items-center gap-2">
+              <div style={{ flex: "0 0 200px", maxWidth: "100%" }}>
                 <Select placeholder="Empresa" isClearable
                   value={ empresas .map(emp => ({ value: emp.id, label: emp.nombre }))
                           .find(opt => opt.value === form.empresa_id) || null }
@@ -597,48 +624,50 @@ function ConnectionsAdmin({ token }) {
                   }} />
               </div>
 
-              <div className="col-sm-3 d-flex align-items-center gap-2">
+              <div className="d-flex align-items-center gap-2 flex-shrink-0">
                 <label className="d-flex align-items-center gap-1 text-nowrap mb-0">
                   <input type="checkbox" name="kiosko" checked={form.kiosko} onChange={onChange} /> Kiosko
                 </label>
-                <input className="form-control" name="ck" placeholder="Cant. Kiosko"
+                <input className="form-control" style={{ width: 80 }} name="ck" placeholder="Cant."
                   title="Cantidad de kioskos" value={form.ck} onChange={onChange} disabled={!form.kiosko} />
               </div>
 
-              <div className="col-sm-3 d-flex align-items-center gap-2">
+              <div className="d-flex align-items-center gap-2 flex-shrink-0">
                 <label className="d-flex align-items-center gap-1 text-nowrap mb-0">
                   <input type="checkbox" name="kds" checked={form.kds} onChange={onChange} /> KDS
                 </label>
-                <input className="form-control" name="c_kds" placeholder="Cant. KDS" title="Cantidad de KDS"
+                <input className="form-control" style={{ width: 80 }} name="c_kds" placeholder="Cant." title="Cantidad de KDS"
                   value={form.c_kds} onChange={onChange} disabled={!form.kds} />
               </div>
 
-              <div className="col-sm-3 d-flex align-items-center gap-2">
+              <div className="d-flex align-items-center gap-2 flex-shrink-0">
                 <label className="d-flex align-items-center gap-1 text-nowrap mb-0">
                   <input type="checkbox" name="llamador" checked={form.llamador} onChange={onChange} /> Llamador
                 </label>
-                <input className="form-control" name="c_llamador" title="IP del Llamador, solo ultimo octeto" placeholder="IP."
+                <input className="form-control" style={{ width: 80 }} name="c_llamador" title="IP del Llamador, solo ultimo octeto" placeholder="IP."
                   value={form.c_llamador} onChange={onChange} disabled={!form.llamador} />
+              </div>
+
+              <div className="d-flex gap-2 ms-auto flex-shrink-0">
+                <button className="btn btn-success" onClick={guardar}>
+                  {form.id ? "Actualizar" : "Crear"}
+                </button>
+
+                <button className="btn btn-secondary"
+                  onClick={() => {
+                    setForm(emptyForm);
+                    setShowForm(false);
+                  }}>
+                  Limpiar
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="col-12 d-flex gap-2 justify-content-end">
-            <button className="btn btn-success" style={{ minWidth: 120 }} onClick={guardar}>
-              {form.id ? "Actualizar" : "Crear"}
-            </button>
-
-            <button className="btn btn-secondary" style={{ minWidth: 120 }}
-              onClick={() => {
-                setForm(emptyForm);
-                setShowFormMobile(false);
-              }}>
-              Limpiar
-            </button>
-          </div>
-
         </div>
       </div>
+      </div>
+      </Collapse>
 
       <div className="table-responsive" style={{ maxHeight: 400, overflowY: "auto" }}>
         <table className="table table-sm table-hover mb-0">

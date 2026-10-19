@@ -376,9 +376,7 @@ function ConnectionsAdmin({ token }) {
 
         <button
           type="button"
-          className={`btn btn-sm rounded-pill px-3 d-none d-md-inline-flex align-items-center gap-2 text-nowrap fw-semibold ${
-            showForm ? "btn-success" : "btn-outline-success"
-          }`}
+          className="btn btn-success d-none d-md-inline-flex align-items-center gap-2 text-nowrap"
           title={showForm ? "Ocultar formulario" : "Mostrar formulario para crear o editar locales"}
           aria-expanded={showForm}
           onClick={() => setShowForm(v => !v)}

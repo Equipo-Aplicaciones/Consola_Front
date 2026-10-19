@@ -530,7 +530,7 @@ function ConnectionsAdmin({ token }) {
             </select>
           </div>
 
-          <div className="col-12 col-md-2">
+          <div className="col-12 col-md-4">
             <Select
               placeholder="Seleccione Rut"
               isClearable
@@ -552,6 +552,12 @@ function ConnectionsAdmin({ token }) {
                 menuPortal: base => ({
                   ...base,
                   zIndex: 9999
+                }),
+                menu: base => ({
+                  ...base,
+                  width: "max-content",
+                  minWidth: "100%",
+                  maxWidth: "calc(100vw - 32px)"
                 })
               }}
               onChange={(opt) => {

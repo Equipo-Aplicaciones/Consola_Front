@@ -384,7 +384,7 @@ function ConnectionsAdmin({ token }) {
           onClick={() => setShowForm(v => !v)}
         >
           <i className={`bi ${form.id ? "bi-pencil" : "bi-plus-lg"}`}></i>
-          {form.id ? "Editando local" : "Nuevo local"}
+          {form.id ? "Editando" : "Nuevo"}
           <i
             className="bi bi-chevron-down"
             style={{

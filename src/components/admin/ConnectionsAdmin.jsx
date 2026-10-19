@@ -374,25 +374,6 @@ function ConnectionsAdmin({ token }) {
 
         <h5 className="mb-0 text-nowrap">Administrar Locales</h5>
 
-        <button
-          type="button"
-          className="btn btn-success d-none d-md-inline-flex align-items-center gap-2 text-nowrap"
-          title={showForm ? "Ocultar formulario" : "Mostrar formulario para crear o editar locales"}
-          aria-expanded={showForm}
-          onClick={() => setShowForm(v => !v)}
-        >
-          <i className={`bi ${form.id ? "bi-pencil" : "bi-plus-lg"}`}></i>
-          {form.id ? "Editando" : "Nuevo"}
-          <i
-            className="bi bi-chevron-down"
-            style={{
-              fontSize: "0.75rem",
-              transition: "transform 0.2s ease",
-              transform: showForm ? "rotate(180deg)" : "none"
-            }}
-          ></i>
-        </button>
-
         <div className="d-flex align-items-center gap-2 ms-auto d-md-none" style={{ position: "relative", zIndex: 3 }}>
           <button
             type="button"
@@ -419,6 +400,25 @@ function ConnectionsAdmin({ token }) {
         </div>
 
         <div className="d-none d-md-flex align-items-center gap-2 ms-md-auto flex-wrap">
+          <button
+            type="button"
+            className="btn btn-success d-none d-md-inline-flex align-items-center gap-2 text-nowrap"
+            title={showForm ? "Ocultar formulario" : "Mostrar formulario para crear o editar locales"}
+            aria-expanded={showForm}
+            onClick={() => setShowForm(v => !v)}
+          >
+            <i className={`bi ${form.id ? "bi-pencil" : "bi-plus-lg"}`}></i>
+            {form.id ? "Editando" : "Nuevo"}
+            <i
+              className="bi bi-chevron-down"
+              style={{
+                fontSize: "0.75rem",
+                transition: "transform 0.2s ease",
+                transform: showForm ? "rotate(180deg)" : "none"
+              }}
+            ></i>
+          </button>
+
           <input
             className="form-control"
             style={{ width: 150 }}

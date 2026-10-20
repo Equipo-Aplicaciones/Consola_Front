@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, Button, Form, Badge, Table, Collapse } from "react-bootstrap";
+import * as XLSX from "xlsx";
 import { API_BASE_URL } from "../../config";
 import FiltroEstados from "./FiltroEstados";
 import GestionInstructivos from "./GestionInstructivos";
@@ -162,6 +163,66 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
     const [year, month, day] = valor.split("-");
 
     return `${day}/${month}/${year}`;
+  };
+
+  // Fecha tal cual (sin desfase de zona horaria) si viene solo como día; con hora si trae hora
+  const fechaParaExcel = valor => {
+    if (!valor) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(valor))) return formatoFecha(valor);
+
+    const fecha = new Date(valor);
+    return Number.isNaN(fecha.getTime()) ? String(valor) : fecha.toLocaleString("es-CL");
+  };
+
+  // Exporta a Excel los locales que se están mostrando (respeta el filtro de estados)
+  const exportarExcel = () => {
+    const filas = localesFiltrados.map(local => ({
+      "Código Local": local.codLocal,
+      "Local": local.nombre_local,
+      "Estado": local.estado_nombre,
+      "Comentario": local.comentario || "",
+      "Fecha aplicación": fechaParaExcel(local.fecha_aplicacion),
+      "Actualizado por": local.actualizado_por_nombre || "",
+      "Última actualización": fechaParaExcel(local.updated_at)
+    }));
+
+    const hojaLocales = XLSX.utils.json_to_sheet(filas);
+    hojaLocales["!cols"] = [{ wch: 13 }, { wch: 34 }, { wch: 14 }, { wch: 40 }, { wch: 18 }, { wch: 24 }, { wch: 22 }];
+
+    const filtroAplicado = filtroEstados.length
+      ? estadosLocales
+          .filter(e => filtroEstados.includes(e.codigo))
+          .map(e => e.nombre)
+          .join(", ")
+      : "Todos los estados";
+
+    const hojaResumen = XLSX.utils.aoa_to_sheet([
+      ["Gestión", gestion.nombre],
+      ["Versión", gestion.version || ""],
+      ["Estado de la gestión", gestion.estado_nombre],
+      ["Fecha de inicio", formatoFecha(gestion.fecha_inicio)],
+      ["Total de locales", resumen.total],
+      ["Terminados", resumen.terminado],
+      ["Pendientes", resumen.pendiente],
+      ["No aplicados", resumen.noAplicado],
+      ["No aplica", resumen.noAplica],
+      ["Avance", `${porcentaje}%`],
+      ["Filtro aplicado en la exportación", filtroAplicado],
+      ["Locales exportados", filas.length],
+      ["Fecha de exportación", new Date().toLocaleString("es-CL")]
+    ]);
+    hojaResumen["!cols"] = [{ wch: 34 }, { wch: 40 }];
+
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, hojaLocales, "Locales");
+    XLSX.utils.book_append_sheet(libro, hojaResumen, "Resumen");
+
+    const nombreSeguro = String(gestion.nombre || "gestion")
+      .replace(/[\\/:*?"<>|]+/g, "_")
+      .replace(/\s+/g, "_");
+    const fecha = new Date().toISOString().split("T")[0];
+
+    XLSX.writeFile(libro, `Gestion_${nombreSeguro}_${fecha}.xlsx`);
   };
 
   const iniciarEdicion = () => {
@@ -1009,6 +1070,16 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                   </Button>
                 </>
               )}
+
+              <Button type="button" size="sm"
+                variant="outline-success"
+                className="ms-md-auto"
+                onClick={exportarExcel}
+                disabled={!localesFiltrados.length}
+                title="Exportar a Excel el estado de los locales que se muestran" >
+                <i className="bi bi-file-earmark-excel me-1" />
+                Exportar
+              </Button>
             </div>
 
             {/* TABLA DE LOCALES */}

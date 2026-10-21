@@ -59,6 +59,7 @@ test("PeYa: cambiar los horarios de una categoría y registrarlo en los cambios"
 
   items["SCH-VIERNES"] = horario("SCH-VIERNES", "FRIDAY", "07:30:00", "22:00:00");
   items["SCH-FULL-DTO"] = { ...horario("SCH-FULL-DTO", "MONDAY"), weekDays: ["MONDAY", "TUESDAY"] };
+  items["SCH-DFD-RECARGADO"] = horario("SCH-DFD-RECARGADO", "SATURDAY", "03:00:00", "03:01:01");
   items.POSTRES.products["SCH-VIERNES"] = { id: "SCH-VIERNES", type: "ScheduleEntry" };
 
   const actual = JSON.parse(JSON.stringify(original));
@@ -67,7 +68,7 @@ test("PeYa: cambiar los horarios de una categoría y registrarlo en los cambios"
   const nombre = C.PEYA.categories(original).find((c) => c.id === "POSTRES").name;
 
   expect(C.PEYA.scheduleOptions(original).map((o) => o.etiqueta)).toEqual([
-    "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo", "FULL-DTO"
+    "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo", "FULL-DTO", "DFD-RECARGADO"
   ]);
   expect(C.PEYA.categorySchedules(actual, "POSTRES")).toEqual(["SCH-JUEVES"]);
   // el día que faltaba se crea con las horas de los demás y no se tocan las existentes
@@ -78,6 +79,36 @@ test("PeYa: cambiar los horarios de una categoría y registrarlo en los cambios"
   expect(C.diff(C.PEYA, original, actual)).toEqual([`Horario: ${nombre} — Viernes → Jueves`]);
   expect(C.diff(C.PEYA, original, original)).toEqual([]);
   expect(C.PEYA.scheduleLabel(original, "SCH-FULL-DTO")).toBe("FULL-DTO");
+});
+
+test("PeYa: renombrar una categoría conserva el formato del título y queda en los cambios", () => {
+  const original = JSON.parse(cargar());
+  const actual = JSON.parse(cargar());
+  const anterior = C.PEYA.categories(original).find((c) => c.id === "POSTRES").name;
+
+  C.PEYA.setCategoryName(actual, "POSTRES", "Postres Nuevos");
+
+  expect(C.PEYA.categories(actual).find((c) => c.id === "POSTRES").name).toBe("Postres Nuevos");
+  expect(typeof actual.catalog.items.POSTRES.title).toBe(typeof original.catalog.items.POSTRES.title);
+  expect(C.diff(C.PEYA, original, actual)).toEqual([`Nombre de categoría: ${anterior} → Postres Nuevos`]);
+});
+
+test("Rappi y Uber: renombrar una categoría", () => {
+  const rappi = JSON.parse(cargarFixture("rappi-muestra.json"));
+  const rappiOriginal = JSON.parse(cargarFixture("rappi-muestra.json"));
+  const catRappi = C.RAPPI.categories(rappi)[0];
+
+  C.RAPPI.setCategoryName(rappi, catRappi.id, "Nueva Rappi");
+
+  expect(C.RAPPI.categories(rappi).find((c) => c.id === catRappi.id).name).toBe("Nueva Rappi");
+  expect(C.diff(C.RAPPI, rappiOriginal, rappi)).toEqual([`Nombre de categoría: ${catRappi.name} → Nueva Rappi`]);
+
+  const uber = JSON.parse(cargarFixture("uber-muestra.json"));
+  const catUber = C.UBER.categories(uber)[0];
+
+  C.UBER.setCategoryName(uber, catUber.id, "Nueva Uber");
+
+  expect(C.UBER.categories(uber).find((c) => c.id === catUber.id).name).toBe("Nueva Uber");
 });
 
 const cargarFixture = leer;

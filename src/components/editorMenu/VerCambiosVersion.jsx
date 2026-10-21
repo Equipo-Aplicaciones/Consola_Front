@@ -83,6 +83,7 @@ export default function VerCambiosVersion({ version, token, fecha, onCerrar }) {
       const ordenCategoria = cambios.find((x) => x.tipo === "orden_categoria" && x.catId === c.id);
       const reordenada = cambios.some((x) => x.tipo === "reordenado" && x.catId === c.id);
       const horario = cambios.find((x) => x.tipo === "horario" && x.catId === c.id);
+      const nombre = cambios.find((x) => x.tipo === "categoria_nombre" && x.catId === c.id);
 
       return {
         ...c,
@@ -91,8 +92,13 @@ export default function VerCambiosVersion({ version, token, fecha, onCerrar }) {
         ordenCategoria,
         reordenada,
         horario,
+        nombre,
         conCambios:
-          modificados + salieron.length > 0 || Boolean(ordenCategoria) || reordenada || Boolean(horario)
+          modificados + salieron.length > 0 ||
+          Boolean(ordenCategoria) ||
+          reordenada ||
+          Boolean(horario) ||
+          Boolean(nombre)
       };
     });
   }, [menu, cambios, porProducto]);
@@ -256,6 +262,9 @@ export default function VerCambiosVersion({ version, token, fecha, onCerrar }) {
                           Orden de categoría {categoria.ordenCategoria.antes ?? "—"} →{" "}
                           {categoria.ordenCategoria.despues ?? "—"}
                         </span>
+                      )}
+                      {categoria.nombre && (
+                        <span className="em-chip">Nombre anterior: {categoria.nombre.antes}</span>
                       )}
                       {categoria.horario && (
                         <span className="em-chip">

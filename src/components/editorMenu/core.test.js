@@ -50,6 +50,28 @@ test("cambiar precio conserva el tipo texto de PeYa", () => {
   expect(json.catalog.items.p3.price).toBe("7990");
 });
 
+test("PeYa: cambiar los horarios de una categoría y registrarlo en los cambios", () => {
+  const original = JSON.parse(cargar());
+  const items = original.catalog.items;
+  const horario = (id, dia) => ({ id, type: "ScheduleEntry", startTime: "06:00:00", endTime: "23:59:59", weekDays: [dia] });
+
+  items["SCH-VIERNES"] = horario("SCH-VIERNES", "FRIDAY");
+  items["SCH-JUEVES"] = horario("SCH-JUEVES", "THURSDAY");
+  items.POSTRES.products["SCH-VIERNES"] = { id: "SCH-VIERNES", type: "ScheduleEntry" };
+
+  const actual = JSON.parse(JSON.stringify(original));
+  C.PEYA.setCategorySchedules(actual, "POSTRES", ["SCH-JUEVES"]);
+
+  const nombre = C.PEYA.categories(original).find((c) => c.id === "POSTRES").name;
+
+  expect(C.PEYA.schedules(original).map((s) => s.id)).toEqual(["SCH-VIERNES", "SCH-JUEVES"]);
+  expect(C.PEYA.categorySchedules(actual, "POSTRES")).toEqual(["SCH-JUEVES"]);
+  expect(C.PEYA.products(actual, "POSTRES")).toEqual(C.PEYA.products(original, "POSTRES"));
+  expect(Object.keys(actual.catalog.items.POSTRES.products)[0]).toBe("SCH-JUEVES");
+  expect(C.diff(C.PEYA, original, actual)).toEqual([`Horario: ${nombre} — SCH-VIERNES → SCH-JUEVES`]);
+  expect(C.diff(C.PEYA, original, original)).toEqual([]);
+});
+
 const cargarFixture = leer;
 
 describe("Rappi", () => {

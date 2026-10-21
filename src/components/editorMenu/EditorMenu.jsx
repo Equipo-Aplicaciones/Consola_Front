@@ -22,12 +22,13 @@ import { IMG_H, IMG_W, descargar, procesarImagen } from "./imagenes";
 import Miniatura from "./Miniatura";
 import EditarProductoModal from "./EditarProductoModal";
 import ExportarVersionModal from "./ExportarVersionModal";
+import HorarioCategoriaModal, { descripcionHorario } from "./HorarioCategoriaModal";
 import HistorialEditorMenu from "./HistorialEditorMenu";
 import "./editorMenu.css";
 
 const MAX_HISTORIAL = 80;
 const MENSAJE_INICIAL =
-  "Carga un JSON de PedidosYa, Rappi o Uber Eats. Solo se puede editar descripción, precio, categoría, orden e imagen.";
+  "Carga un JSON de PedidosYa, Rappi o Uber Eats. Solo se puede editar descripción, precio, categoría, orden e imagen (y, en PedidosYa, el horario de cada categoría).";
 
 const dinero = (n) => "$" + Number(n || 0).toLocaleString("es-CL");
 const normalizar = (s) =>
@@ -62,6 +63,7 @@ export default function EditorMenu({ token }) {
   const [busquedaItem, setBusquedaItem] = useState("");
   const [mensaje, setMensaje] = useState({ tipo: "", contenido: MENSAJE_INICIAL });
   const [editando, setEditando] = useState(null);
+  const [editandoHorario, setEditandoHorario] = useState(false);
   const [ordenArrastre, setOrdenArrastre] = useState(null);
   const [destacada, setDestacada] = useState(null);
   const [vista, setVista] = useState("editor");
@@ -322,6 +324,19 @@ export default function EditorMenu({ token }) {
     refrescar();
   };
 
+  const guardarHorarios = (ids) => {
+    const antes = adapter.categorySchedules(data, seleccionada);
+
+    setEditandoHorario(false);
+
+    if (antes.slice().sort().join() === ids.slice().sort().join()) return;
+
+    snap();
+    adapter.setCategorySchedules(data, seleccionada, ids);
+    avisar("ok", <>Horario de la categoría actualizado: <b>{nombreCategoria(seleccionada)}</b>.</>);
+    refrescar();
+  };
+
   const abrirEdicion = (catId, key) => {
     const p = adapter.products(data, catId).find((x) => x.key === key);
     if (p) setEditando({ ...p, catId });
@@ -506,6 +521,17 @@ export default function EditorMenu({ token }) {
   let productos = [];
   if (cargado && seleccionada && categoriaActual) {
     productos = adapter.products(data, seleccionada).sort((a, b) => (a.order ?? 1e9) - (b.order ?? 1e9));
+  }
+  let resumenHorario = "";
+  if (cargado && adapter.schedules && categoriaActual) {
+    const definidos = adapter.schedules(data);
+    resumenHorario = adapter
+      .categorySchedules(data, categoriaActual.id)
+      .map((id) => {
+        const h = definidos.find((x) => x.id === id);
+        return h ? `${h.id} (${descripcionHorario(h)})` : id;
+      })
+      .join(" · ");
   }
   const clavesOriginales = productos.map((p) => p.key);
   if (ordenArrastre) {
@@ -709,6 +735,17 @@ export default function EditorMenu({ token }) {
               <div>
                 <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
                   <h5 className="mb-0 me-auto">{categoriaActual.name}</h5>
+                  {adapter.schedules && (
+                    <>
+                      <span className="small text-muted" title="Horarios en que se muestra la categoría">
+                        <i className="bi bi-clock me-1" />
+                        {resumenHorario || "Todos los días"}
+                      </span>
+                      <Button size="sm" variant="outline-secondary" onClick={() => setEditandoHorario(true)}>
+                        Horario
+                      </Button>
+                    </>
+                  )}
                   {!adapter.positional && (
                     <Button size="sm" variant="outline-secondary" onClick={renumerar}>
                       Renumerar 1, 2, 3…
@@ -883,6 +920,17 @@ export default function EditorMenu({ token }) {
           </section>
         </div>
       </div>
+
+      {editandoHorario && categoriaActual && (
+        <HorarioCategoriaModal
+          key={categoriaActual.id}
+          categoria={categoriaActual}
+          horarios={adapter.schedules(data)}
+          seleccionados={adapter.categorySchedules(data, categoriaActual.id)}
+          onGuardar={guardarHorarios}
+          onCerrar={() => setEditandoHorario(false)}
+        />
+      )}
 
       {editando && (
         <EditarProductoModal

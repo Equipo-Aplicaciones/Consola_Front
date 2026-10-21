@@ -120,7 +120,21 @@ const PEYA = {
     dst.products[key] = ref;
   },
   canSetCategoryOrder: (j, catId) => !!PEYA._menu(j).products?.[catId],
-  setCategoryOrder(j, catId, n) { this._menu(j).products[catId].order = n; }
+  setCategoryOrder(j, catId, n) { this._menu(j).products[catId].order = n; },
+  // Horarios (ScheduleEntry): la categoría solo se muestra en los días/franjas de los que referencia.
+  schedules(j) {
+    return Object.entries(this._items(j)).filter(([, x]) => x && x.type === 'ScheduleEntry')
+      .map(([id, s]) => ({ id, days: s.weekDays || [], start: s.startTime || '', end: s.endTime || '' }));
+  },
+  categorySchedules(j, catId) {
+    return Object.entries(this._items(j)[catId].products || {}).filter(([, r]) => r.type === 'ScheduleEntry').map(([id]) => id);
+  },
+  setCategorySchedules(j, catId, ids) {
+    const cat = this._items(j)[catId], actuales = cat.products || {};
+    const otros = Object.entries(actuales).filter(([, r]) => r.type !== 'ScheduleEntry');
+    const horarios = ids.map(id => [id, actuales[id] || { id, type: 'ScheduleEntry' }]);
+    cat.products = Object.fromEntries([...horarios, ...otros]);
+  }
 };
 
 // ---------------- Rappi ----------------
@@ -253,6 +267,11 @@ function diffDetalle(adapter, original, current) {
     const seq = l => l.filter(c => c.order != null).sort((x, y) => x.order - y.order).map(c => c.name);
     if (seq(ca).join() !== seq(cb).join()) out.push({ tipo: 'orden_categorias', antes: seq(ca), despues: seq(cb), texto: 'Orden de categorías: ' + seq(cb).map((n, i) => (i + 1) + '. ' + n).join(' | ') });
   } else for (const c of cb) { const o = ca.find(x => x.id === c.id); if (o && o.order !== c.order) out.push({ tipo: 'orden_categoria', catId: c.id, catName: c.name, antes: o.order, despues: c.order, texto: `Orden categoría: ${c.name} — ${o.order} → ${c.order}` }); }
+  if (adapter.categorySchedules) for (const c of cb) {
+    if (!ca.some(x => x.id === c.id)) continue;
+    const a = adapter.categorySchedules(original, c.id).sort(), b = adapter.categorySchedules(current, c.id).sort();
+    if (a.join() !== b.join()) out.push({ tipo: 'horario', catId: c.id, catName: c.name, antes: a, despues: b, texto: `Horario: ${c.name} — ${a.join(', ') || '(todos los días)'} → ${b.join(', ') || '(todos los días)'}` });
+  }
   return out;
 }
 const diff = (adapter, original, current) => diffDetalle(adapter, original, current).map(x => x.texto);

@@ -22,7 +22,7 @@ import { IMG_H, IMG_W, descargar, procesarImagen } from "./imagenes";
 import Miniatura from "./Miniatura";
 import EditarProductoModal from "./EditarProductoModal";
 import ExportarVersionModal from "./ExportarVersionModal";
-import HorarioCategoriaModal, { descripcionHorario } from "./HorarioCategoriaModal";
+import HorarioCategoriaModal from "./HorarioCategoriaModal";
 import HistorialEditorMenu from "./HistorialEditorMenu";
 import "./editorMenu.css";
 
@@ -523,15 +523,22 @@ export default function EditorMenu({ token }) {
     productos = adapter.products(data, seleccionada).sort((a, b) => (a.order ?? 1e9) - (b.order ?? 1e9));
   }
   let resumenHorario = "";
-  if (cargado && adapter.schedules && categoriaActual) {
-    const definidos = adapter.schedules(data);
-    resumenHorario = adapter
-      .categorySchedules(data, categoriaActual.id)
-      .map((id) => {
-        const h = definidos.find((x) => x.id === id);
-        return h ? `${h.id} (${descripcionHorario(h)})` : id;
-      })
-      .join(" · ");
+  let opcionesHorario = [];
+  let horariosCategoria = [];
+  if (cargado && adapter.scheduleOptions && categoriaActual) {
+    horariosCategoria = adapter.categorySchedules(data, categoriaActual.id);
+    opcionesHorario = adapter.scheduleOptions(data);
+
+    for (const id of horariosCategoria) {
+      if (!opcionesHorario.some((o) => o.id === id)) {
+        opcionesHorario.push({ id, etiqueta: adapter.scheduleLabel(data, id) });
+      }
+    }
+
+    resumenHorario = opcionesHorario
+      .filter((o) => horariosCategoria.includes(o.id))
+      .map((o) => o.etiqueta)
+      .join(", ");
   }
   const clavesOriginales = productos.map((p) => p.key);
   if (ordenArrastre) {
@@ -735,7 +742,7 @@ export default function EditorMenu({ token }) {
               <div>
                 <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
                   <h5 className="mb-0 me-auto">{categoriaActual.name}</h5>
-                  {adapter.schedules && (
+                  {adapter.scheduleOptions && (
                     <>
                       <span className="small text-muted" title="Horarios en que se muestra la categoría">
                         <i className="bi bi-clock me-1" />
@@ -925,8 +932,8 @@ export default function EditorMenu({ token }) {
         <HorarioCategoriaModal
           key={categoriaActual.id}
           categoria={categoriaActual}
-          horarios={adapter.schedules(data)}
-          seleccionados={adapter.categorySchedules(data, categoriaActual.id)}
+          opciones={opcionesHorario}
+          seleccionados={horariosCategoria}
           onGuardar={guardarHorarios}
           onCerrar={() => setEditandoHorario(false)}
         />

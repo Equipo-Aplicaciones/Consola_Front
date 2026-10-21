@@ -57,6 +57,15 @@ function setImageUrl(o, url) {
 function writeNumberLike(obj, key, n) { obj[key] = typeof obj[key] === 'string' ? String(n) : n; }
 
 // ---------------- PedidosYa ----------------
+const DIAS_PEYA = [
+  ['MONDAY', 'SCH-LUNES', 'Lunes'],
+  ['TUESDAY', 'SCH-MARTES', 'Martes'],
+  ['WEDNESDAY', 'SCH-MIERCOLES', 'Miércoles'],
+  ['THURSDAY', 'SCH-JUEVES', 'Jueves'],
+  ['FRIDAY', 'SCH-VIERNES', 'Viernes'],
+  ['SATURDAY', 'SCH-SABADOS', 'Sábado'],
+  ['SUNDAY', 'SCH-DOMINGO', 'Domingo']
+];
 const PEYA = {
   name: 'PedidosYa',
   detect: j => !!(j && j.catalog && j.catalog.items && Object.values(j.catalog.items).some(x => x && x.type === 'Menu')),
@@ -121,16 +130,29 @@ const PEYA = {
   },
   canSetCategoryOrder: (j, catId) => !!PEYA._menu(j).products?.[catId],
   setCategoryOrder(j, catId, n) { this._menu(j).products[catId].order = n; },
-  // Horarios (ScheduleEntry): la categoría solo se muestra en los días/franjas de los que referencia.
-  schedules(j) {
-    return Object.entries(this._items(j)).filter(([, x]) => x && x.type === 'ScheduleEntry')
-      .map(([id, s]) => ({ id, days: s.weekDays || [], start: s.startTime || '', end: s.endTime || '' }));
+  // Horarios (ScheduleEntry): la categoría solo se muestra en los días de los horarios que referencia.
+  // Se ofrecen los 7 días (si el ítem no existe en el JSON se crea al usarlo, con las horas de los demás
+  // días) y SCH-FULL-DTO si el menú lo tiene. Las horas no se editan.
+  scheduleOptions(j) {
+    const opciones = DIAS_PEYA.map(([, id, etiqueta]) => ({ id, etiqueta }));
+    if (this._items(j)['SCH-FULL-DTO']) opciones.push({ id: 'SCH-FULL-DTO', etiqueta: 'FULL-DTO' });
+    return opciones;
+  },
+  scheduleLabel(j, id) {
+    const dia = DIAS_PEYA.find(d => d[1] === id);
+    return dia ? dia[2] : id.replace(/^SCH-/, '');
   },
   categorySchedules(j, catId) {
     return Object.entries(this._items(j)[catId].products || {}).filter(([, r]) => r.type === 'ScheduleEntry').map(([id]) => id);
   },
   setCategorySchedules(j, catId, ids) {
-    const cat = this._items(j)[catId], actuales = cat.products || {};
+    const items = this._items(j), cat = items[catId], actuales = cat.products || {};
+    const base = DIAS_PEYA.map(d => items[d[1]]).find(Boolean);
+    for (const id of ids) {
+      const dia = DIAS_PEYA.find(d => d[1] === id);
+      if (items[id] || !dia) continue;
+      items[id] = { id, type: 'ScheduleEntry', startTime: base?.startTime ?? '06:00:00', endTime: base?.endTime ?? '23:59:59', weekDays: [dia[0]] };
+    }
     const otros = Object.entries(actuales).filter(([, r]) => r.type !== 'ScheduleEntry');
     const horarios = ids.map(id => [id, actuales[id] || { id, type: 'ScheduleEntry' }]);
     cat.products = Object.fromEntries([...horarios, ...otros]);
@@ -270,7 +292,10 @@ function diffDetalle(adapter, original, current) {
   if (adapter.categorySchedules) for (const c of cb) {
     if (!ca.some(x => x.id === c.id)) continue;
     const a = adapter.categorySchedules(original, c.id).sort(), b = adapter.categorySchedules(current, c.id).sort();
-    if (a.join() !== b.join()) out.push({ tipo: 'horario', catId: c.id, catName: c.name, antes: a, despues: b, texto: `Horario: ${c.name} — ${a.join(', ') || '(todos los días)'} → ${b.join(', ') || '(todos los días)'}` });
+    if (a.join() !== b.join()) {
+      const antes = a.map(id => adapter.scheduleLabel(original, id)), despues = b.map(id => adapter.scheduleLabel(current, id));
+      out.push({ tipo: 'horario', catId: c.id, catName: c.name, antes, despues, texto: `Horario: ${c.name} — ${antes.join(', ') || '(todos los días)'} → ${despues.join(', ') || '(todos los días)'}` });
+    }
   }
   return out;
 }

@@ -153,36 +153,6 @@ test("PeYa: al quitar los días no viaja ninguna referencia ni queda una entrada
   expect(C.serialize(limpio, C.detectIndent(texto), C.detectFloatKeys(texto))).toBe(texto);
 });
 
-test("PeYa: renombrar una categoría conserva el formato del título y queda en los cambios", () => {
-  const original = JSON.parse(cargar());
-  const actual = JSON.parse(cargar());
-  const anterior = C.PEYA.categories(original).find((c) => c.id === "POSTRES").name;
-
-  C.PEYA.setCategoryName(actual, "POSTRES", "Postres Nuevos");
-
-  expect(C.PEYA.categories(actual).find((c) => c.id === "POSTRES").name).toBe("Postres Nuevos");
-  expect(typeof actual.catalog.items.POSTRES.title).toBe(typeof original.catalog.items.POSTRES.title);
-  expect(C.diff(C.PEYA, original, actual)).toEqual([`Nombre de categoría: ${anterior} → Postres Nuevos`]);
-});
-
-test("Rappi y Uber: renombrar una categoría", () => {
-  const rappi = JSON.parse(cargarFixture("rappi-muestra.json"));
-  const rappiOriginal = JSON.parse(cargarFixture("rappi-muestra.json"));
-  const catRappi = C.RAPPI.categories(rappi)[0];
-
-  C.RAPPI.setCategoryName(rappi, catRappi.id, "Nueva Rappi");
-
-  expect(C.RAPPI.categories(rappi).find((c) => c.id === catRappi.id).name).toBe("Nueva Rappi");
-  expect(C.diff(C.RAPPI, rappiOriginal, rappi)).toEqual([`Nombre de categoría: ${catRappi.name} → Nueva Rappi`]);
-
-  const uber = JSON.parse(cargarFixture("uber-muestra.json"));
-  const catUber = C.UBER.categories(uber)[0];
-
-  C.UBER.setCategoryName(uber, catUber.id, "Nueva Uber");
-
-  expect(C.UBER.categories(uber).find((c) => c.id === catUber.id).name).toBe("Nueva Uber");
-});
-
 const cargarFixture = leer;
 
 describe("Rappi", () => {

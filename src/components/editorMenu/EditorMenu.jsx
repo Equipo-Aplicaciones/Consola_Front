@@ -28,7 +28,7 @@ import "./editorMenu.css";
 
 const MAX_HISTORIAL = 80;
 const MENSAJE_INICIAL =
-  "Carga un JSON de PedidosYa, Rappi o Uber Eats. Solo se puede editar descripción, precio, categoría, orden e imagen, además del nombre de cada categoría (y, en PedidosYa, su horario).";
+  "Carga un JSON de PedidosYa, Rappi o Uber Eats. Solo se puede editar descripción, precio, categoría, orden e imagen (y, en PedidosYa, el horario de cada categoría).";
 
 const dinero = (n) => "$" + Number(n || 0).toLocaleString("es-CL");
 const normalizar = (s) =>
@@ -64,7 +64,6 @@ export default function EditorMenu({ token }) {
   const [mensaje, setMensaje] = useState({ tipo: "", contenido: MENSAJE_INICIAL });
   const [editando, setEditando] = useState(null);
   const [editandoHorario, setEditandoHorario] = useState(false);
-  const [nombreNuevo, setNombreNuevo] = useState(null);
   const [ordenArrastre, setOrdenArrastre] = useState(null);
   const [destacada, setDestacada] = useState(null);
   const [vista, setVista] = useState("editor");
@@ -85,10 +84,6 @@ export default function EditorMenu({ token }) {
       actual.sinIdentificar.forEach((i) => URL.revokeObjectURL(i.url));
     };
   }, []);
-
-  useEffect(() => {
-    setNombreNuevo(null);
-  }, [seleccionada]);
 
   useEffect(() => {
     if (!destacada) return undefined;
@@ -329,25 +324,6 @@ export default function EditorMenu({ token }) {
     refrescar();
   };
 
-  const guardarNombreCategoria = () => {
-    const nombre = nombreNuevo.trim();
-    const actual = nombreCategoria(seleccionada);
-
-    if (!nombre) {
-      avisar("warn", "El nombre de la categoría no puede quedar vacío.");
-      return;
-    }
-
-    setNombreNuevo(null);
-
-    if (nombre === actual) return;
-
-    snap();
-    adapter.setCategoryName(data, seleccionada, nombre);
-    avisar("ok", <>Categoría renombrada: <b>{actual}</b> → <b>{nombre}</b>.</>);
-    refrescar();
-  };
-
   const guardarHorarios = (nueva) => {
     const { seleccion } = adapter.scheduleChoices(data, seleccionada);
     const igual = (a, b) => a.slice().sort().join() === b.slice().sort().join();
@@ -500,7 +476,6 @@ export default function EditorMenu({ token }) {
     setBusquedaItem("");
     setEditando(null);
     setEditandoHorario(false);
-    setNombreNuevo(null);
     setOrdenArrastre(null);
     setDestacada(null);
     refrescar();
@@ -784,40 +759,7 @@ export default function EditorMenu({ token }) {
             {cargado && !consultaItem && categoriaActual && (
               <div>
                 <div className="d-flex align-items-center gap-2 flex-wrap mb-2">
-                  {nombreNuevo === null ? (
-                    <>
-                      <h5 className="mb-0">{categoriaActual.name}</h5>
-                      <Button
-                        size="sm"
-                        variant="link"
-                        className="p-0 me-auto"
-                        title="Renombrar categoría"
-                        onClick={() => setNombreNuevo(categoriaActual.name)}
-                      >
-                        <i className="bi bi-pencil" />
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <input
-                        autoFocus
-                        className="form-control form-control-sm me-auto"
-                        style={{ maxWidth: 360 }}
-                        value={nombreNuevo}
-                        onChange={(e) => setNombreNuevo(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") guardarNombreCategoria();
-                          if (e.key === "Escape") setNombreNuevo(null);
-                        }}
-                      />
-                      <Button size="sm" variant="primary" onClick={guardarNombreCategoria}>
-                        Guardar nombre
-                      </Button>
-                      <Button size="sm" variant="outline-secondary" onClick={() => setNombreNuevo(null)}>
-                        Cancelar
-                      </Button>
-                    </>
-                  )}
+                  <h5 className="mb-0 me-auto">{categoriaActual.name}</h5>
                   {adapter.scheduleChoices && (
                     <>
                       <span className="small text-muted" title="Horarios en que se muestra la categoría">

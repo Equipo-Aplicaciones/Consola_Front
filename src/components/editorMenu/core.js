@@ -132,7 +132,6 @@ const PEYA = {
   },
   canSetCategoryOrder: (j, catId) => !!PEYA._menu(j).products?.[catId],
   setCategoryOrder(j, catId, n) { this._menu(j).products[catId].order = n; },
-  setCategoryName(j, catId, nombre) { writeText(this._items(j)[catId], 'title', nombre, t => ({ default: t })); },
   // Horarios (ScheduleEntry): la categoría solo se muestra en los días del horario que referencia.
   // Los días elegidos se agrupan en UNA entrada (se reutiliza una existente con los mismos días o se crea,
   // con las horas de los demás días); SCH-FULL-DTO / SCH-DFD-RECARGADO se ofrecen aparte. Las horas no se editan.
@@ -243,10 +242,6 @@ const RAPPI = {
   setCategoryOrder(j, catId, n) {
     for (const it of j.items) if (it.category && it.category.id === catId) it.category.sortingPosition = n;
     if (j.__rappiCatCache && j.__rappiCatCache[catId]) j.__rappiCatCache[catId].sortingPosition = n;
-  },
-  setCategoryName(j, catId, nombre) {
-    for (const it of j.items) if (it.category && it.category.id === catId) it.category.name = nombre;
-    if (j.__rappiCatCache && j.__rappiCatCache[catId]) j.__rappiCatCache[catId].name = nombre;
   }
 };
 
@@ -286,8 +281,7 @@ const UBER = {
     (dst.entities = dst.entities || []).push(ent);
   },
   canSetCategoryOrder: (j, catId) => (j.menus[0].category_ids || []).includes(catId),
-  setCategoryOrder(j, catId, n) { const ids = this._menu(j).category_ids, i = ids.indexOf(catId); if (i >= 0) this._mv(ids, i, n - 1); },
-  setCategoryName(j, catId, nombre) { writeText(this._cat(j, catId), 'title', nombre, t => ({ translations: { en: t } })); }
+  setCategoryOrder(j, catId, n) { const ids = this._menu(j).category_ids, i = ids.indexOf(catId); if (i >= 0) this._mv(ids, i, n - 1); }
 };
 
 const ADAPTERS = [PEYA, RAPPI, UBER];
@@ -337,10 +331,6 @@ function diffDetalle(adapter, original, current) {
     const seq = l => l.filter(c => c.order != null).sort((x, y) => x.order - y.order).map(c => c.name);
     if (seq(ca).join() !== seq(cb).join()) out.push({ tipo: 'orden_categorias', antes: seq(ca), despues: seq(cb), texto: 'Orden de categorías: ' + seq(cb).map((n, i) => (i + 1) + '. ' + n).join(' | ') });
   } else for (const c of cb) { const o = ca.find(x => x.id === c.id); if (o && o.order !== c.order) out.push({ tipo: 'orden_categoria', catId: c.id, catName: c.name, antes: o.order, despues: c.order, texto: `Orden categoría: ${c.name} — ${o.order} → ${c.order}` }); }
-  for (const c of cb) {
-    const o = ca.find(x => x.id === c.id);
-    if (o && o.name !== c.name) out.push({ tipo: 'categoria_nombre', catId: c.id, catName: c.name, antes: o.name, despues: c.name, texto: `Nombre de categoría: ${o.name} → ${c.name}` });
-  }
   if (adapter.categorySchedules) for (const c of cb) {
     if (!ca.some(x => x.id === c.id)) continue;
     const a = adapter.categorySchedules(original, c.id).sort(), b = adapter.categorySchedules(current, c.id).sort();

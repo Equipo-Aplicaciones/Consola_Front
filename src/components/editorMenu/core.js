@@ -57,13 +57,6 @@ function setImageUrl(o, url) {
 function writeNumberLike(obj, key, n) { obj[key] = typeof obj[key] === 'string' ? String(n) : n; }
 
 // ---------------- PedidosYa ----------------
-const slugId = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-// Cambia un id en todo el árbol (claves y valores iguales a `de`), conservando el orden de las claves.
-function reemplazarId(nodo, de, a) {
-  if (Array.isArray(nodo)) return nodo.map(x => reemplazarId(x, de, a));
-  if (nodo && typeof nodo === 'object') return Object.fromEntries(Object.entries(nodo).map(([k, v]) => [k === de ? a : k, reemplazarId(v, de, a)]));
-  return nodo === de ? a : nodo;
-}
 const DIAS_PEYA = [
   ['MONDAY', 'SCH-LUNES', 'Lunes'],
   ['TUESDAY', 'SCH-MARTES', 'Martes'],
@@ -139,24 +132,7 @@ const PEYA = {
   },
   canSetCategoryOrder: (j, catId) => !!PEYA._menu(j).products?.[catId],
   setCategoryOrder(j, catId, n) { this._menu(j).products[catId].order = n; },
-  // Cambia el título y, si el id de la categoría era el título en mayúsculas con guiones (MEGA-DESCUENTO-VIERNES),
-  // también el id, en todas sus referencias. Un id distinto (UUID, otro formato) no se toca. Devuelve el id final.
-  setCategoryName(j, catId, nombre) {
-    const actual = readText(this._items(j)[catId].title).trim();
-    let id = catId;
-    const nuevo = slugId(nombre);
-
-    if (nuevo && slugId(actual) === catId && nuevo !== catId && !this._items(j)[nuevo]) {
-      for (const k of Object.keys(j)) if (!k.startsWith('__')) j[k] = reemplazarId(j[k], catId, nuevo);
-      const ren = j.__renombradas = j.__renombradas || {};
-      const origen = Object.keys(ren).find(k => ren[k] === catId) ?? catId;
-      ren[origen] = nuevo;
-      id = nuevo;
-    }
-
-    writeText(this._items(j)[id], 'title', nombre, t => ({ default: t }));
-    return id;
-  },
+  setCategoryName(j, catId, nombre) { writeText(this._items(j)[catId], 'title', nombre, t => ({ default: t })); },
   // Horarios (ScheduleEntry): la categoría solo se muestra en los días del horario que referencia.
   // Los días elegidos se agrupan en UNA entrada (se reutiliza una existente con los mismos días o se crea,
   // con las horas de los demás días); SCH-FULL-DTO / SCH-DFD-RECARGADO se ofrecen aparte. Las horas no se editan.
@@ -338,11 +314,8 @@ function detectIndent(text) { const m = text.match(/\n( +|\t)"/); return m ? (m[
 // Cambios entre el original y el estado actual. Cada entrada trae un texto legible y los datos
 // estructurados (antes/después) para poder mostrarlos gráficamente.
 function diffDetalle(adapter, original, current) {
-  // Si el editor cambió el id de una categoría (__renombradas: id original → id actual), el original se
-  // lee con los ids actuales para que no se tome como una categoría nueva ni como productos movidos.
-  const ren = current.__renombradas || {}, aActual = id => ren[id] ?? id, deOriginal = id => Object.keys(ren).find(k => ren[k] === id) ?? id;
-  const out = [], snap = (j, mapa) => { const m = {}; for (const p of allProducts(adapter, j)) { (m[p.key] = m[p.key] || []).push({ ...p, catId: mapa(p.catId) }); } return m; };
-  const A = snap(original, aActual), B = snap(current, id => id), fmt = n => '$' + Number(n).toLocaleString('es-CL');
+  const out = [], snap = j => { const m = {}; for (const p of allProducts(adapter, j)) { (m[p.key] = m[p.key] || []).push(p); } return m; };
+  const A = snap(original), B = snap(current), fmt = n => '$' + Number(n).toLocaleString('es-CL');
   for (const [k, list] of Object.entries(B)) {
     const before = A[k]; if (!before) continue;
     const v = list[0], o = before[0];
@@ -354,26 +327,23 @@ function diffDetalle(adapter, original, current) {
     if (o.image !== v.image) out.push({ ...base, tipo: 'imagen', antes: o.image, despues: v.image, texto: `Imagen: ${v.name} — ${ultimoSegmento(o.image) || '(sin imagen)'} → ${ultimoSegmento(v.image) || '(sin imagen)'}` });
     if (o.desc !== v.desc) out.push({ ...base, tipo: 'descripcion', antes: o.desc, despues: v.desc, texto: `Descripción: ${v.name} — "${o.desc}" → "${v.desc}"` });
   }
-  const ca = adapter.categories(original).map(c => ({ ...c, id: aActual(c.id) })), cb = adapter.categories(current);
+  const ca = adapter.categories(original), cb = adapter.categories(current);
   if (adapter.positional) {
     for (const c of cb) {
       if (!ca.some(x => x.id === c.id)) continue;
-      const b = adapter.products(original, deOriginal(c.id)).map(p => p.key), a = adapter.products(current, c.id).map(p => p.key);
+      const b = adapter.products(original, c.id).map(p => p.key), a = adapter.products(current, c.id).map(p => p.key);
       if (a.filter(k => b.includes(k)).join() !== b.filter(k => a.includes(k)).join()) out.push({ tipo: 'reordenado', catId: c.id, catName: c.name, texto: `Reordenado: ${c.name}` });
     }
     const seq = l => l.filter(c => c.order != null).sort((x, y) => x.order - y.order).map(c => c.name);
     if (seq(ca).join() !== seq(cb).join()) out.push({ tipo: 'orden_categorias', antes: seq(ca), despues: seq(cb), texto: 'Orden de categorías: ' + seq(cb).map((n, i) => (i + 1) + '. ' + n).join(' | ') });
   } else for (const c of cb) { const o = ca.find(x => x.id === c.id); if (o && o.order !== c.order) out.push({ tipo: 'orden_categoria', catId: c.id, catName: c.name, antes: o.order, despues: c.order, texto: `Orden categoría: ${c.name} — ${o.order} → ${c.order}` }); }
   for (const c of cb) {
-    if (deOriginal(c.id) !== c.id) out.push({ tipo: 'categoria_id', catId: c.id, catName: c.name, antes: deOriginal(c.id), despues: c.id, texto: `Id de categoría: ${deOriginal(c.id)} → ${c.id}` });
-  }
-  for (const c of cb) {
     const o = ca.find(x => x.id === c.id);
     if (o && o.name !== c.name) out.push({ tipo: 'categoria_nombre', catId: c.id, catName: c.name, antes: o.name, despues: c.name, texto: `Nombre de categoría: ${o.name} → ${c.name}` });
   }
   if (adapter.categorySchedules) for (const c of cb) {
     if (!ca.some(x => x.id === c.id)) continue;
-    const a = adapter.categorySchedules(original, deOriginal(c.id)).sort(), b = adapter.categorySchedules(current, c.id).sort();
+    const a = adapter.categorySchedules(original, c.id).sort(), b = adapter.categorySchedules(current, c.id).sort();
     if (a.join() !== b.join()) {
       const antes = a.map(id => adapter.scheduleLabel(original, id)), despues = b.map(id => adapter.scheduleLabel(current, id));
       out.push({ tipo: 'horario', catId: c.id, catName: c.name, antes, despues, texto: `Horario: ${c.name} — ${antes.join(', ') || '(todos los días)'} → ${despues.join(', ') || '(todos los días)'}` });

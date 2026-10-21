@@ -63,13 +63,16 @@ test("PeYa: cambiar los horarios de una categoría y registrarlo en los cambios"
   items.POSTRES.products["SCH-VIERNES"] = { id: "SCH-VIERNES", type: "ScheduleEntry" };
 
   const actual = JSON.parse(JSON.stringify(original));
-  C.PEYA.setCategorySchedules(actual, "POSTRES", ["SCH-JUEVES"]);
+  C.PEYA.setCategorySchedule(actual, "POSTRES", { dias: ["THURSDAY"], especiales: [] });
 
   const nombre = C.PEYA.categories(original).find((c) => c.id === "POSTRES").name;
+  const opciones = C.PEYA.scheduleChoices(original, "POSTRES");
 
-  expect(C.PEYA.scheduleOptions(original).map((o) => o.etiqueta)).toEqual([
-    "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo", "FULL-DTO", "DFD-RECARGADO"
+  expect(opciones.dias.map((d) => d.etiqueta)).toEqual([
+    "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"
   ]);
+  expect(opciones.especiales.map((e) => e.etiqueta)).toEqual(["FULL-DTO", "DFD-RECARGADO"]);
+  expect(opciones.seleccion).toEqual({ dias: ["FRIDAY"], especiales: [] });
   expect(C.PEYA.categorySchedules(actual, "POSTRES")).toEqual(["SCH-JUEVES"]);
   // el día que faltaba se crea con las horas de los demás y no se tocan las existentes
   expect(actual.catalog.items["SCH-JUEVES"]).toEqual(horario("SCH-JUEVES", "THURSDAY", "07:30:00", "22:00:00"));
@@ -79,6 +82,49 @@ test("PeYa: cambiar los horarios de una categoría y registrarlo en los cambios"
   expect(C.diff(C.PEYA, original, actual)).toEqual([`Horario: ${nombre} — Viernes → Jueves`]);
   expect(C.diff(C.PEYA, original, original)).toEqual([]);
   expect(C.PEYA.scheduleLabel(original, "SCH-FULL-DTO")).toBe("FULL-DTO");
+});
+
+test("PeYa: varios días se agrupan en una sola entrada y se reutiliza", () => {
+  const original = JSON.parse(cargar());
+  const items = original.catalog.items;
+
+  items["SCH-LUNES"] = { id: "SCH-LUNES", type: "ScheduleEntry", startTime: "06:00:00", endTime: "23:59:59", weekDays: ["MONDAY"] };
+  items["SCH-FULL-DTO"] = { id: "SCH-FULL-DTO", type: "ScheduleEntry", startTime: "06:00:00", endTime: "23:59:59", weekDays: ["MONDAY", "TUESDAY"] };
+  items.BEBIDAS = { id: "BEBIDAS", type: "Category", title: { default: "Bebidas" }, products: {} };
+
+  const actual = JSON.parse(JSON.stringify(original));
+  C.PEYA.setCategorySchedule(actual, "POSTRES", { dias: ["SUNDAY", "MONDAY", "WEDNESDAY"], especiales: [] });
+
+  // una sola referencia, con los días en orden de semana y las horas de los demás días
+  expect(C.PEYA.categorySchedules(actual, "POSTRES")).toEqual(["SCH-LUN-MIE-DOM"]);
+  expect(actual.catalog.items["SCH-LUN-MIE-DOM"]).toEqual({
+    id: "SCH-LUN-MIE-DOM",
+    type: "ScheduleEntry",
+    startTime: "06:00:00",
+    endTime: "23:59:59",
+    weekDays: ["MONDAY", "WEDNESDAY", "SUNDAY"]
+  });
+  expect(C.PEYA.scheduleChoices(actual, "POSTRES").seleccion).toEqual({ dias: ["MONDAY", "WEDNESDAY", "SUNDAY"], especiales: [] });
+  expect(C.PEYA.scheduleLabel(actual, "SCH-LUN-MIE-DOM")).toBe("Lunes, Miércoles, Domingo");
+
+  // otra categoría con la misma combinación reutiliza la entrada, sin duplicarla
+  const antes = Object.keys(actual.catalog.items).length;
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: ["MONDAY", "WEDNESDAY", "SUNDAY"], especiales: [] });
+  expect(C.PEYA.categorySchedules(actual, "BEBIDAS")).toEqual(["SCH-LUN-MIE-DOM"]);
+  expect(Object.keys(actual.catalog.items).length).toBe(antes);
+
+  // un día suelto usa la entrada del día existente, no crea otra
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: ["MONDAY"], especiales: [] });
+  expect(C.PEYA.categorySchedules(actual, "BEBIDAS")).toEqual(["SCH-LUNES"]);
+
+  // un horario especial es una sola referencia y no se confunde con días
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: [], especiales: ["SCH-FULL-DTO"] });
+  expect(C.PEYA.categorySchedules(actual, "BEBIDAS")).toEqual(["SCH-FULL-DTO"]);
+  expect(C.PEYA.scheduleChoices(actual, "BEBIDAS").seleccion).toEqual({ dias: [], especiales: ["SCH-FULL-DTO"] });
+
+  // sin días ni especiales se quitan los horarios (se muestra todos los días)
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: [], especiales: [] });
+  expect(C.PEYA.categorySchedules(actual, "BEBIDAS")).toEqual([]);
 });
 
 test("PeYa: renombrar una categoría conserva el formato del título y queda en los cambios", () => {

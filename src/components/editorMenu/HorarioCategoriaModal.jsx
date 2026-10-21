@@ -1,11 +1,20 @@
 import { useState } from "react";
 import { Button, Form, Modal } from "react-bootstrap";
 
-export default function HorarioCategoriaModal({ categoria, opciones, seleccionados, onGuardar, onCerrar }) {
-  const [marcados, setMarcados] = useState(seleccionados);
+export default function HorarioCategoriaModal({ categoria, opciones, onGuardar, onCerrar }) {
+  const [dias, setDias] = useState(opciones.seleccion.dias);
+  const [especiales, setEspeciales] = useState(opciones.seleccion.especiales);
 
-  const alternar = (id) =>
-    setMarcados((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  // Un horario especial reemplaza a los días y viceversa: la categoría queda con una sola referencia.
+  const alternarDia = (id) => {
+    setEspeciales([]);
+    setDias((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const alternarEspecial = (id) => {
+    setDias([]);
+    setEspeciales((prev) => (prev.includes(id) ? [] : [id]));
+  };
 
   return (
     <Modal show onHide={onCerrar} centered>
@@ -20,25 +29,45 @@ export default function HorarioCategoriaModal({ categoria, opciones, seleccionad
         </div>
 
         <div className="row g-2">
-          {opciones.map((o) => (
-            <div className="col-6" key={o.id}>
+          {opciones.dias.map((d) => (
+            <div className="col-6" key={d.id}>
               <Form.Check
                 type="checkbox"
-                id={`horario-${o.id}`}
-                label={o.etiqueta}
-                checked={marcados.includes(o.id)}
-                onChange={() => alternar(o.id)}
+                id={`horario-${d.id}`}
+                label={d.etiqueta}
+                checked={dias.includes(d.id)}
+                onChange={() => alternarDia(d.id)}
               />
             </div>
           ))}
         </div>
+
+        {opciones.especiales.length > 0 && (
+          <>
+            <hr />
+            <div className="small text-muted mb-2">Horarios especiales (reemplazan a los días)</div>
+            <div className="row g-2">
+              {opciones.especiales.map((e) => (
+                <div className="col-6" key={e.id}>
+                  <Form.Check
+                    type="checkbox"
+                    id={`horario-${e.id}`}
+                    label={e.etiqueta}
+                    checked={especiales.includes(e.id)}
+                    onChange={() => alternarEspecial(e.id)}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </Modal.Body>
 
       <Modal.Footer>
         <Button variant="secondary" onClick={onCerrar}>
           Cancelar
         </Button>
-        <Button variant="primary" onClick={() => onGuardar(marcados)}>
+        <Button variant="primary" onClick={() => onGuardar({ dias, especiales })}>
           Aplicar
         </Button>
       </Modal.Footer>

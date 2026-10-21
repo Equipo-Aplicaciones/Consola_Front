@@ -470,11 +470,40 @@ export default function EditorMenu({ token }) {
     setGuardandoVersion(false);
     setExportando(false);
     await exportarArchivos(true);
+    limpiarEditor();
   };
 
   const exportarSinGuardar = async () => {
     setExportando(false);
     await exportarArchivos(false);
+    limpiarEditor();
+  };
+
+  // Tras exportar, el editor vuelve al estado inicial (sin JSON, imágenes ni cambios) para empezar de cero.
+  const limpiarEditor = () => {
+    const s = store.current;
+
+    s.imgs.forEach((i) => URL.revokeObjectURL(i.url));
+    s.imgs.clear();
+    s.sinIdentificar.forEach((i) => URL.revokeObjectURL(i.url));
+    s.sinIdentificar = [];
+    s.history = [];
+    s.data = null;
+    s.original = null;
+    s.adapter = null;
+    s.plan = null;
+    s.contenido = "";
+    s.detalle = [];
+
+    setSeleccionada(null);
+    setBusquedaCat("");
+    setBusquedaItem("");
+    setEditando(null);
+    setEditandoHorario(false);
+    setNombreNuevo(null);
+    setOrdenArrastre(null);
+    setDestacada(null);
+    refrescar();
   };
 
   const exportarArchivos = async (guardada) => {

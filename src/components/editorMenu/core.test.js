@@ -127,6 +127,32 @@ test("PeYa: varios días se agrupan en una sola entrada y se reutiliza", () => {
   expect(C.PEYA.categorySchedules(actual, "BEBIDAS")).toEqual([]);
 });
 
+test("PeYa: al quitar los días no viaja ninguna referencia ni queda una entrada creada sin uso", () => {
+  const original = JSON.parse(cargar());
+  const items = original.catalog.items;
+
+  items["SCH-LUNES"] = { id: "SCH-LUNES", type: "ScheduleEntry", startTime: "06:00:00", endTime: "23:59:59", weekDays: ["MONDAY"] };
+
+  const actual = JSON.parse(JSON.stringify(original));
+  C.PEYA.setCategorySchedule(actual, "POSTRES", { dias: ["MONDAY", "SUNDAY"], especiales: [] });
+  expect(actual.catalog.items["SCH-LUN-DOM"]).toBeDefined();
+
+  C.PEYA.setCategorySchedule(actual, "POSTRES", { dias: [], especiales: [] });
+
+  expect(C.PEYA.categorySchedules(actual, "POSTRES")).toEqual([]);
+  expect(Object.values(actual.catalog.items.POSTRES.products).some((r) => r.type === "ScheduleEntry")).toBe(false);
+  expect(actual.catalog.items["SCH-LUN-DOM"]).toBeUndefined();
+  // lo que ya venía en el JSON original no se elimina
+  expect(actual.catalog.items["SCH-LUNES"]).toBeDefined();
+
+  // y el JSON exportado queda idéntico al original, sin rastro del editor
+  const texto = cargar();
+  const limpio = JSON.parse(texto);
+  C.PEYA.setCategorySchedule(limpio, "POSTRES", { dias: ["TUESDAY", "SUNDAY"], especiales: [] });
+  C.PEYA.setCategorySchedule(limpio, "POSTRES", { dias: [], especiales: [] });
+  expect(C.serialize(limpio, C.detectIndent(texto), C.detectFloatKeys(texto))).toBe(texto);
+});
+
 test("PeYa: renombrar una categoría conserva el formato del título y queda en los cambios", () => {
   const original = JSON.parse(cargar());
   const actual = JSON.parse(cargar());

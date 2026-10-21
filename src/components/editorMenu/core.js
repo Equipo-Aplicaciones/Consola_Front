@@ -183,7 +183,14 @@ const PEYA = {
     let id = raiz;
     for (let n = 2; items[id]; n++) id = `${raiz}-${n}`;
     items[id] = { id, type: 'ScheduleEntry', startTime: base?.startTime ?? '06:00:00', endTime: base?.endTime ?? '23:59:59', weekDays: dias };
+    (j.__horariosCreados = j.__horariosCreados || []).push(id);
     return id;
+  },
+  // Las entradas creadas por el editor que ya no usa ninguna categoría se quitan del JSON (las originales no se tocan).
+  _limpiarHorariosCreados(j) {
+    const items = this._items(j), usados = new Set();
+    for (const x of Object.values(items)) if (x && x.type === 'Category') for (const [id, r] of Object.entries(x.products || {})) if (r.type === 'ScheduleEntry') usados.add(id);
+    j.__horariosCreados = (j.__horariosCreados || []).filter(id => usados.has(id) || (delete items[id], false));
   },
   setCategorySchedule(j, catId, { dias = [], especiales = [] }) {
     const cat = this._items(j)[catId], actuales = cat.products || {};
@@ -191,6 +198,7 @@ const PEYA = {
     const ids = [...(diasOrdenados.length ? [this._scheduleEntryFor(j, diasOrdenados)] : []), ...especiales];
     const otros = Object.entries(actuales).filter(([, r]) => r.type !== 'ScheduleEntry');
     cat.products = Object.fromEntries([...ids.map(id => [id, actuales[id] || { id, type: 'ScheduleEntry' }]), ...otros]);
+    this._limpiarHorariosCreados(j);
   }
 };
 

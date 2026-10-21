@@ -160,9 +160,57 @@ test("PeYa: renombrar una categoría conserva el formato del título y queda en 
 
   C.PEYA.setCategoryName(actual, "POSTRES", "Postres Nuevos");
 
-  expect(C.PEYA.categories(actual).find((c) => c.id === "POSTRES").name).toBe("Postres Nuevos");
-  expect(typeof actual.catalog.items.POSTRES.title).toBe(typeof original.catalog.items.POSTRES.title);
-  expect(C.diff(C.PEYA, original, actual)).toEqual([`Nombre de categoría: ${anterior} → Postres Nuevos`]);
+  expect(C.PEYA.categories(actual).find((c) => c.id === "POSTRES-NUEVOS").name).toBe("Postres Nuevos");
+  expect(typeof actual.catalog.items["POSTRES-NUEVOS"].title).toBe(typeof original.catalog.items.POSTRES.title);
+  expect(C.diff(C.PEYA, original, actual)).toEqual([
+    "Id de categoría: POSTRES → POSTRES-NUEVOS",
+    `Nombre de categoría: ${anterior} → Postres Nuevos`
+  ]);
+});
+
+test("PeYa: al renombrar, el id se actualiza en toda la declaración y el historial no lo toma como categoría nueva", () => {
+  const texto = cargar();
+  const original = JSON.parse(texto);
+  original.catalog.items.POSTRES.id = "POSTRES";
+  original.catalog.items.OTRA = { id: "OTRA", type: "Category", title: { default: "Combos Especiales" }, products: {} };
+  original.catalog.items.m.products.OTRA = { id: "OTRA", type: "Category", order: 2 };
+
+  const actual = JSON.parse(JSON.stringify(original));
+
+  expect(C.PEYA.setCategoryName(actual, "POSTRES", "Postres de Fin de Semana")).toBe("POSTRES-DE-FIN-DE-SEMANA");
+
+  const items = actual.catalog.items;
+  expect(items.POSTRES).toBeUndefined();
+  expect(items["POSTRES-DE-FIN-DE-SEMANA"].id).toBe("POSTRES-DE-FIN-DE-SEMANA");
+  expect(items["POSTRES-DE-FIN-DE-SEMANA"].title.default).toBe("Postres de Fin de Semana");
+  expect(items.m.products["POSTRES-DE-FIN-DE-SEMANA"]).toEqual({ id: "POSTRES-DE-FIN-DE-SEMANA", type: "Category", order: 1 });
+  expect(items.m.products.POSTRES).toBeUndefined();
+  // los productos siguen en la categoría, con su orden
+  expect(C.PEYA.products(actual, "POSTRES-DE-FIN-DE-SEMANA").map((p) => p.key)).toEqual(
+    C.PEYA.products(original, "POSTRES").map((p) => p.key)
+  );
+  // la categoría conserva su posición entre las demás
+  expect(Object.keys(items).indexOf("POSTRES-DE-FIN-DE-SEMANA")).toBe(Object.keys(original.catalog.items).indexOf("POSTRES"));
+
+  // el historial solo registra el id y el nombre: no hay "movidos" ni cambios de orden
+  expect(C.diff(C.PEYA, original, actual)).toEqual([
+    "Id de categoría: POSTRES → POSTRES-DE-FIN-DE-SEMANA",
+    "Nombre de categoría: Postres → Postres de Fin de Semana"
+  ]);
+
+  // un segundo cambio de nombre encadena desde el id original
+  C.PEYA.setCategoryName(actual, "POSTRES-DE-FIN-DE-SEMANA", "Dulces");
+  expect(C.diff(C.PEYA, original, actual)).toEqual([
+    "Id de categoría: POSTRES → DULCES",
+    "Nombre de categoría: Postres → Dulces"
+  ]);
+
+  // el JSON exportado no lleva rastro del mapa de ids
+  expect(C.serialize(actual, C.detectIndent(texto), C.detectFloatKeys(texto))).not.toContain("__renombradas");
+
+  // un id que no es el título (UUID u otro formato) no se toca; solo cambia el título
+  expect(C.PEYA.setCategoryName(actual, "OTRA", "Combos Nuevos")).toBe("OTRA");
+  expect(actual.catalog.items.OTRA.title.default).toBe("Combos Nuevos");
 });
 
 test("Rappi y Uber: renombrar una categoría", () => {

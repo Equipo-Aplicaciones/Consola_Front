@@ -272,7 +272,18 @@ export default function EditorMenu({ token }) {
   const deshacer = () => {
     if (!history.length) return;
 
+    const renombradas = store.current.data.__renombradas || {};
     store.current.data = JSON.parse(history.pop());
+
+    // Si se deshace un cambio de id, la categoría seleccionada ya no existe: se vuelve a su id anterior.
+    const existentes = ordenarCategorias(adapter.categories(store.current.data));
+    if (!existentes.some((c) => c.id === seleccionada)) {
+      const anterior = Object.keys(renombradas).find((k) => renombradas[k] === seleccionada);
+      setSeleccionada(
+        existentes.some((c) => c.id === anterior) ? anterior : existentes.find((c) => !c.hidden)?.id ?? null
+      );
+    }
+
     avisar("", "Último cambio deshecho.");
     refrescar();
   };
@@ -343,8 +354,18 @@ export default function EditorMenu({ token }) {
     if (nombre === actual) return;
 
     snap();
-    adapter.setCategoryName(data, seleccionada, nombre);
-    avisar("ok", <>Categoría renombrada: <b>{actual}</b> → <b>{nombre}</b>.</>);
+    const idAnterior = seleccionada;
+    const idNuevo = adapter.setCategoryName(data, seleccionada, nombre) ?? idAnterior;
+
+    if (idNuevo !== idAnterior) setSeleccionada(idNuevo);
+
+    avisar(
+      "ok",
+      <>
+        Categoría renombrada: <b>{actual}</b> → <b>{nombre}</b>
+        {idNuevo !== idAnterior ? <> (id <b>{idAnterior}</b> → <b>{idNuevo}</b>)</> : null}.
+      </>
+    );
     refrescar();
   };
 

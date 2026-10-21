@@ -185,19 +185,42 @@ const PEYA = {
     (j.__horariosCreados = j.__horariosCreados || []).push(id);
     return id;
   },
-  // Las entradas creadas por el editor que ya no usa ninguna categoría se quitan del JSON (las originales no se tocan).
-  _limpiarHorariosCreados(j) {
-    const items = this._items(j), usados = new Set();
-    for (const x of Object.values(items)) if (x && x.type === 'Category') for (const [id, r] of Object.entries(x.products || {})) if (r.type === 'ScheduleEntry') usados.add(id);
-    j.__horariosCreados = (j.__horariosCreados || []).filter(id => usados.has(id) || (delete items[id], false));
+  // ¿Algo en el JSON (aparte de su propia definición) apunta a este id, como clave o como valor?
+  _referenciado(j, id) {
+    const items = this._items(j), def = items[id];
+    const visita = n => {
+      if (Array.isArray(n)) return n.some(visita);
+      if (n && typeof n === 'object') {
+        if (n === def) return false;
+        return Object.entries(n).some(([k, v]) => (k === id && n !== items) || visita(v));
+      }
+      return n === id;
+    };
+    return Object.keys(j).filter(k => !k.startsWith('__')).some(k => visita(j[k]));
+  },
+  // Tras un cambio se quitan las entradas que quedaron sin uso: las que creó el editor y las que la categoría
+  // acaba de dejar de usar. Se conservan los horarios especiales y los 7 días base (otras categorías los usarán).
+  _limpiarHorarios(j, previos) {
+    const items = this._items(j), creados = j.__horariosCreados || [];
+
+    for (const id of new Set([...creados, ...previos])) {
+      const x = items[id];
+      if (!x || x.type !== 'ScheduleEntry' || HORARIOS_ESPECIALES_PEYA.includes(id)) continue;
+
+      const eliminable = creados.includes(id) || !DIAS_PEYA.some(d => d[1] === id);
+      if (eliminable && !this._referenciado(j, id)) delete items[id];
+    }
+
+    j.__horariosCreados = creados.filter(id => items[id]);
   },
   setCategorySchedule(j, catId, { dias = [], especiales = [] }) {
     const cat = this._items(j)[catId], actuales = cat.products || {};
+    const previos = this.categorySchedules(j, catId);
     const diasOrdenados = DIAS_PEYA.map(d => d[0]).filter(d => dias.includes(d));
     const ids = [...(diasOrdenados.length ? [this._scheduleEntryFor(j, diasOrdenados)] : []), ...especiales];
     const otros = Object.entries(actuales).filter(([, r]) => r.type !== 'ScheduleEntry');
     cat.products = Object.fromEntries([...ids.map(id => [id, actuales[id] || { id, type: 'ScheduleEntry' }]), ...otros]);
-    this._limpiarHorariosCreados(j);
+    this._limpiarHorarios(j, previos);
   }
 };
 

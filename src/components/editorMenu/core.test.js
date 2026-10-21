@@ -153,6 +153,41 @@ test("PeYa: al quitar los días no viaja ninguna referencia ni queda una entrada
   expect(C.serialize(limpio, C.detectIndent(texto), C.detectFloatKeys(texto))).toBe(texto);
 });
 
+test("PeYa: al cambiar de horario se elimina la entrada anterior que ya nadie usa", () => {
+  const original = JSON.parse(cargar());
+  const items = original.catalog.items;
+  const entrada = (id, dias) => ({ id, type: "ScheduleEntry", startTime: "06:00:00", endTime: "23:59:59", weekDays: dias });
+
+  items["SCH-VIERNES"] = entrada("SCH-VIERNES", ["FRIDAY"]);
+  items["SCH-FULL-DTO"] = entrada("SCH-FULL-DTO", ["MONDAY", "TUESDAY"]);
+  items["SCH-VIE-SAB-DOM"] = entrada("SCH-VIE-SAB-DOM", ["FRIDAY", "SATURDAY", "SUNDAY"]);
+  items["SCH-HUERFANO"] = entrada("SCH-HUERFANO", ["MONDAY", "SUNDAY"]);
+  items.BEBIDAS = { id: "BEBIDAS", type: "Category", title: { default: "Bebidas" }, products: {} };
+  items.POSTRES.products["SCH-VIE-SAB-DOM"] = { id: "SCH-VIE-SAB-DOM", type: "ScheduleEntry" };
+  items.BEBIDAS.products["SCH-VIE-SAB-DOM"] = { id: "SCH-VIE-SAB-DOM", type: "ScheduleEntry" };
+
+  const actual = JSON.parse(JSON.stringify(original));
+
+  // otra categoría aún la usa: se conserva
+  C.PEYA.setCategorySchedule(actual, "POSTRES", { dias: ["FRIDAY"], especiales: [] });
+  expect(C.PEYA.categorySchedules(actual, "POSTRES")).toEqual(["SCH-VIERNES"]);
+  expect(actual.catalog.items["SCH-VIE-SAB-DOM"]).toBeDefined();
+
+  // la última categoría que la usaba la deja: se elimina
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: ["FRIDAY"], especiales: [] });
+  expect(actual.catalog.items["SCH-VIE-SAB-DOM"]).toBeUndefined();
+
+  // no se tocan: el día base, el horario especial ni entradas que ya estaban sin uso en el original
+  expect(actual.catalog.items["SCH-VIERNES"]).toBeDefined();
+  expect(actual.catalog.items["SCH-FULL-DTO"]).toBeDefined();
+  expect(actual.catalog.items["SCH-HUERFANO"]).toBeDefined();
+
+  // un horario especial que se deja de usar tampoco se elimina
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: [], especiales: ["SCH-FULL-DTO"] });
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: ["FRIDAY"], especiales: [] });
+  expect(actual.catalog.items["SCH-FULL-DTO"]).toBeDefined();
+});
+
 const cargarFixture = leer;
 
 describe("Rappi", () => {

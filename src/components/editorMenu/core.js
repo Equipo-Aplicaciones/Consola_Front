@@ -57,6 +57,17 @@ function setImageUrl(o, url) {
 function writeNumberLike(obj, key, n) { obj[key] = typeof obj[key] === 'string' ? String(n) : n; }
 
 // ---------------- PedidosYa ----------------
+const DIAS_PEYA = [
+  ['MONDAY', 'SCH-LUNES', 'Lunes'],
+  ['TUESDAY', 'SCH-MARTES', 'Martes'],
+  ['WEDNESDAY', 'SCH-MIERCOLES', 'Miércoles'],
+  ['THURSDAY', 'SCH-JUEVES', 'Jueves'],
+  ['FRIDAY', 'SCH-VIERNES', 'Viernes'],
+  ['SATURDAY', 'SCH-SABADOS', 'Sábado'],
+  ['SUNDAY', 'SCH-DOMINGO', 'Domingo']
+];
+// Horarios que no son un día suelto: se ofrecen solo si el menú los define.
+const HORARIOS_ESPECIALES_PEYA = ['SCH-FULL-DTO', 'SCH-DFD-RECARGADO'];
 const PEYA = {
   name: 'PedidosYa',
   detect: j => !!(j && j.catalog && j.catalog.items && Object.values(j.catalog.items).some(x => x && x.type === 'Menu')),
@@ -120,7 +131,97 @@ const PEYA = {
     dst.products[key] = ref;
   },
   canSetCategoryOrder: (j, catId) => !!PEYA._menu(j).products?.[catId],
-  setCategoryOrder(j, catId, n) { this._menu(j).products[catId].order = n; }
+  setCategoryOrder(j, catId, n) { this._menu(j).products[catId].order = n; },
+  // Horarios (ScheduleEntry): la categoría solo se muestra en los días del horario que referencia.
+  // Los días elegidos se agrupan en UNA entrada (se reutiliza una existente con los mismos días o se crea,
+  // con las horas de los demás días); SCH-FULL-DTO / SCH-DFD-RECARGADO se ofrecen aparte. Las horas no se editan.
+  categorySchedules(j, catId) {
+    return Object.entries(this._items(j)[catId].products || {}).filter(([, r]) => r.type === 'ScheduleEntry').map(([id]) => id);
+  },
+  // Opciones de la UI y selección actual: los días de las entradas referenciadas se unen; lo que no
+  // se puede traducir a días (especiales o ids sin definir) queda como opción especial.
+  scheduleChoices(j, catId) {
+    const items = this._items(j);
+    const especiales = HORARIOS_ESPECIALES_PEYA.filter(id => items[id]).map(id => ({ id, etiqueta: id.replace(/^SCH-/, '') }));
+    const dias = new Set(), seleccionEspeciales = [];
+
+    for (const id of this.categorySchedules(j, catId)) {
+      const it = items[id], porDefecto = DIAS_PEYA.find(d => d[1] === id);
+      if (!HORARIOS_ESPECIALES_PEYA.includes(id) && it && (it.weekDays || []).length) it.weekDays.forEach(d => dias.add(d));
+      else if (!HORARIOS_ESPECIALES_PEYA.includes(id) && !it && porDefecto) dias.add(porDefecto[0]);
+      else {
+        seleccionEspeciales.push(id);
+        if (!especiales.some(e => e.id === id)) especiales.push({ id, etiqueta: id.replace(/^SCH-/, '') });
+      }
+    }
+
+    return {
+      dias: DIAS_PEYA.map(([id, , etiqueta]) => ({ id, etiqueta })),
+      especiales,
+      seleccion: { dias: DIAS_PEYA.map(d => d[0]).filter(d => dias.has(d)), especiales: seleccionEspeciales }
+    };
+  },
+  scheduleLabel(j, id) {
+    const it = this._items(j)[id];
+    let dias = HORARIOS_ESPECIALES_PEYA.includes(id) ? [] : (it?.weekDays || []);
+    if (!dias.length && !HORARIOS_ESPECIALES_PEYA.includes(id)) { const d = DIAS_PEYA.find(x => x[1] === id); if (d) dias = [d[0]]; }
+    const nombres = DIAS_PEYA.filter(d => dias.includes(d[0])).map(d => d[2]);
+    return nombres.length ? nombres.join(', ') : id.replace(/^SCH-/, '');
+  },
+  _scheduleEntryFor(j, dias) {
+    const items = this._items(j);
+    const porDefecto = dias.length === 1 ? DIAS_PEYA.find(d => d[0] === dias[0])[1] : null;
+    const iguales = Object.entries(items)
+      .filter(([id, x]) => x && x.type === 'ScheduleEntry' && !HORARIOS_ESPECIALES_PEYA.includes(id) && (x.weekDays || []).length === dias.length && dias.every(d => x.weekDays.includes(d)))
+      .map(([id]) => id);
+    if (iguales.length) return iguales.includes(porDefecto) ? porDefecto : iguales[0];
+
+    const base = DIAS_PEYA.map(d => items[d[1]]).find(Boolean)
+      || Object.entries(items).find(([id, x]) => x && x.type === 'ScheduleEntry' && !HORARIOS_ESPECIALES_PEYA.includes(id))?.[1];
+    const raiz = porDefecto || 'SCH-' + DIAS_PEYA.filter(d => dias.includes(d[0])).map(d => d[1].slice(4, 7)).join('-');
+    let id = raiz;
+    for (let n = 2; items[id]; n++) id = `${raiz}-${n}`;
+    items[id] = { id, type: 'ScheduleEntry', startTime: base?.startTime ?? '06:00:00', endTime: base?.endTime ?? '23:59:59', weekDays: dias };
+    (j.__horariosCreados = j.__horariosCreados || []).push(id);
+    return id;
+  },
+  // ¿Algo en el JSON (aparte de su propia definición) apunta a este id, como clave o como valor?
+  _referenciado(j, id) {
+    const items = this._items(j), def = items[id];
+    const visita = n => {
+      if (Array.isArray(n)) return n.some(visita);
+      if (n && typeof n === 'object') {
+        if (n === def) return false;
+        return Object.entries(n).some(([k, v]) => (k === id && n !== items) || visita(v));
+      }
+      return n === id;
+    };
+    return Object.keys(j).filter(k => !k.startsWith('__')).some(k => visita(j[k]));
+  },
+  // Tras un cambio se quitan las entradas que quedaron sin uso: las que creó el editor y las que la categoría
+  // acaba de dejar de usar. Se conservan los horarios especiales y los 7 días base (otras categorías los usarán).
+  _limpiarHorarios(j, previos) {
+    const items = this._items(j), creados = j.__horariosCreados || [];
+
+    for (const id of new Set([...creados, ...previos])) {
+      const x = items[id];
+      if (!x || x.type !== 'ScheduleEntry' || HORARIOS_ESPECIALES_PEYA.includes(id)) continue;
+
+      const eliminable = creados.includes(id) || !DIAS_PEYA.some(d => d[1] === id);
+      if (eliminable && !this._referenciado(j, id)) delete items[id];
+    }
+
+    j.__horariosCreados = creados.filter(id => items[id]);
+  },
+  setCategorySchedule(j, catId, { dias = [], especiales = [] }) {
+    const cat = this._items(j)[catId], actuales = cat.products || {};
+    const previos = this.categorySchedules(j, catId);
+    const diasOrdenados = DIAS_PEYA.map(d => d[0]).filter(d => dias.includes(d));
+    const ids = [...(diasOrdenados.length ? [this._scheduleEntryFor(j, diasOrdenados)] : []), ...especiales];
+    const otros = Object.entries(actuales).filter(([, r]) => r.type !== 'ScheduleEntry');
+    cat.products = Object.fromEntries([...ids.map(id => [id, actuales[id] || { id, type: 'ScheduleEntry' }]), ...otros]);
+    this._limpiarHorarios(j, previos);
+  }
 };
 
 // ---------------- Rappi ----------------
@@ -253,6 +354,14 @@ function diffDetalle(adapter, original, current) {
     const seq = l => l.filter(c => c.order != null).sort((x, y) => x.order - y.order).map(c => c.name);
     if (seq(ca).join() !== seq(cb).join()) out.push({ tipo: 'orden_categorias', antes: seq(ca), despues: seq(cb), texto: 'Orden de categorías: ' + seq(cb).map((n, i) => (i + 1) + '. ' + n).join(' | ') });
   } else for (const c of cb) { const o = ca.find(x => x.id === c.id); if (o && o.order !== c.order) out.push({ tipo: 'orden_categoria', catId: c.id, catName: c.name, antes: o.order, despues: c.order, texto: `Orden categoría: ${c.name} — ${o.order} → ${c.order}` }); }
+  if (adapter.categorySchedules) for (const c of cb) {
+    if (!ca.some(x => x.id === c.id)) continue;
+    const a = adapter.categorySchedules(original, c.id).sort(), b = adapter.categorySchedules(current, c.id).sort();
+    if (a.join() !== b.join()) {
+      const antes = a.map(id => adapter.scheduleLabel(original, id)), despues = b.map(id => adapter.scheduleLabel(current, id));
+      out.push({ tipo: 'horario', catId: c.id, catName: c.name, antes, despues, texto: `Horario: ${c.name} — ${antes.join(', ') || '(todos los días)'} → ${despues.join(', ') || '(todos los días)'}` });
+    }
+  }
   return out;
 }
 const diff = (adapter, original, current) => diffDetalle(adapter, original, current).map(x => x.texto);

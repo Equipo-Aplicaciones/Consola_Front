@@ -50,6 +50,144 @@ test("cambiar precio conserva el tipo texto de PeYa", () => {
   expect(json.catalog.items.p3.price).toBe("7990");
 });
 
+test("PeYa: cambiar los horarios de una categoría y registrarlo en los cambios", () => {
+  const original = JSON.parse(cargar());
+  const items = original.catalog.items;
+  const horario = (id, dia, desde = "06:00:00", hasta = "23:59:59") => ({
+    id, type: "ScheduleEntry", startTime: desde, endTime: hasta, weekDays: [dia]
+  });
+
+  items["SCH-VIERNES"] = horario("SCH-VIERNES", "FRIDAY", "07:30:00", "22:00:00");
+  items["SCH-FULL-DTO"] = { ...horario("SCH-FULL-DTO", "MONDAY"), weekDays: ["MONDAY", "TUESDAY"] };
+  items["SCH-DFD-RECARGADO"] = horario("SCH-DFD-RECARGADO", "SATURDAY", "03:00:00", "03:01:01");
+  items.POSTRES.products["SCH-VIERNES"] = { id: "SCH-VIERNES", type: "ScheduleEntry" };
+
+  const actual = JSON.parse(JSON.stringify(original));
+  C.PEYA.setCategorySchedule(actual, "POSTRES", { dias: ["THURSDAY"], especiales: [] });
+
+  const nombre = C.PEYA.categories(original).find((c) => c.id === "POSTRES").name;
+  const opciones = C.PEYA.scheduleChoices(original, "POSTRES");
+
+  expect(opciones.dias.map((d) => d.etiqueta)).toEqual([
+    "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"
+  ]);
+  expect(opciones.especiales.map((e) => e.etiqueta)).toEqual(["FULL-DTO", "DFD-RECARGADO"]);
+  expect(opciones.seleccion).toEqual({ dias: ["FRIDAY"], especiales: [] });
+  expect(C.PEYA.categorySchedules(actual, "POSTRES")).toEqual(["SCH-JUEVES"]);
+  // el día que faltaba se crea con las horas de los demás y no se tocan las existentes
+  expect(actual.catalog.items["SCH-JUEVES"]).toEqual(horario("SCH-JUEVES", "THURSDAY", "07:30:00", "22:00:00"));
+  expect(actual.catalog.items["SCH-VIERNES"]).toEqual(items["SCH-VIERNES"]);
+  expect(C.PEYA.products(actual, "POSTRES")).toEqual(C.PEYA.products(original, "POSTRES"));
+  expect(Object.keys(actual.catalog.items.POSTRES.products)[0]).toBe("SCH-JUEVES");
+  expect(C.diff(C.PEYA, original, actual)).toEqual([`Horario: ${nombre} — Viernes → Jueves`]);
+  expect(C.diff(C.PEYA, original, original)).toEqual([]);
+  expect(C.PEYA.scheduleLabel(original, "SCH-FULL-DTO")).toBe("FULL-DTO");
+});
+
+test("PeYa: varios días se agrupan en una sola entrada y se reutiliza", () => {
+  const original = JSON.parse(cargar());
+  const items = original.catalog.items;
+
+  items["SCH-LUNES"] = { id: "SCH-LUNES", type: "ScheduleEntry", startTime: "06:00:00", endTime: "23:59:59", weekDays: ["MONDAY"] };
+  items["SCH-FULL-DTO"] = { id: "SCH-FULL-DTO", type: "ScheduleEntry", startTime: "06:00:00", endTime: "23:59:59", weekDays: ["MONDAY", "TUESDAY"] };
+  items.BEBIDAS = { id: "BEBIDAS", type: "Category", title: { default: "Bebidas" }, products: {} };
+
+  const actual = JSON.parse(JSON.stringify(original));
+  C.PEYA.setCategorySchedule(actual, "POSTRES", { dias: ["SUNDAY", "MONDAY", "WEDNESDAY"], especiales: [] });
+
+  // una sola referencia, con los días en orden de semana y las horas de los demás días
+  expect(C.PEYA.categorySchedules(actual, "POSTRES")).toEqual(["SCH-LUN-MIE-DOM"]);
+  expect(actual.catalog.items["SCH-LUN-MIE-DOM"]).toEqual({
+    id: "SCH-LUN-MIE-DOM",
+    type: "ScheduleEntry",
+    startTime: "06:00:00",
+    endTime: "23:59:59",
+    weekDays: ["MONDAY", "WEDNESDAY", "SUNDAY"]
+  });
+  expect(C.PEYA.scheduleChoices(actual, "POSTRES").seleccion).toEqual({ dias: ["MONDAY", "WEDNESDAY", "SUNDAY"], especiales: [] });
+  expect(C.PEYA.scheduleLabel(actual, "SCH-LUN-MIE-DOM")).toBe("Lunes, Miércoles, Domingo");
+
+  // otra categoría con la misma combinación reutiliza la entrada, sin duplicarla
+  const antes = Object.keys(actual.catalog.items).length;
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: ["MONDAY", "WEDNESDAY", "SUNDAY"], especiales: [] });
+  expect(C.PEYA.categorySchedules(actual, "BEBIDAS")).toEqual(["SCH-LUN-MIE-DOM"]);
+  expect(Object.keys(actual.catalog.items).length).toBe(antes);
+
+  // un día suelto usa la entrada del día existente, no crea otra
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: ["MONDAY"], especiales: [] });
+  expect(C.PEYA.categorySchedules(actual, "BEBIDAS")).toEqual(["SCH-LUNES"]);
+
+  // un horario especial es una sola referencia y no se confunde con días
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: [], especiales: ["SCH-FULL-DTO"] });
+  expect(C.PEYA.categorySchedules(actual, "BEBIDAS")).toEqual(["SCH-FULL-DTO"]);
+  expect(C.PEYA.scheduleChoices(actual, "BEBIDAS").seleccion).toEqual({ dias: [], especiales: ["SCH-FULL-DTO"] });
+
+  // sin días ni especiales se quitan los horarios (se muestra todos los días)
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: [], especiales: [] });
+  expect(C.PEYA.categorySchedules(actual, "BEBIDAS")).toEqual([]);
+});
+
+test("PeYa: al quitar los días no viaja ninguna referencia ni queda una entrada creada sin uso", () => {
+  const original = JSON.parse(cargar());
+  const items = original.catalog.items;
+
+  items["SCH-LUNES"] = { id: "SCH-LUNES", type: "ScheduleEntry", startTime: "06:00:00", endTime: "23:59:59", weekDays: ["MONDAY"] };
+
+  const actual = JSON.parse(JSON.stringify(original));
+  C.PEYA.setCategorySchedule(actual, "POSTRES", { dias: ["MONDAY", "SUNDAY"], especiales: [] });
+  expect(actual.catalog.items["SCH-LUN-DOM"]).toBeDefined();
+
+  C.PEYA.setCategorySchedule(actual, "POSTRES", { dias: [], especiales: [] });
+
+  expect(C.PEYA.categorySchedules(actual, "POSTRES")).toEqual([]);
+  expect(Object.values(actual.catalog.items.POSTRES.products).some((r) => r.type === "ScheduleEntry")).toBe(false);
+  expect(actual.catalog.items["SCH-LUN-DOM"]).toBeUndefined();
+  // lo que ya venía en el JSON original no se elimina
+  expect(actual.catalog.items["SCH-LUNES"]).toBeDefined();
+
+  // y el JSON exportado queda idéntico al original, sin rastro del editor
+  const texto = cargar();
+  const limpio = JSON.parse(texto);
+  C.PEYA.setCategorySchedule(limpio, "POSTRES", { dias: ["TUESDAY", "SUNDAY"], especiales: [] });
+  C.PEYA.setCategorySchedule(limpio, "POSTRES", { dias: [], especiales: [] });
+  expect(C.serialize(limpio, C.detectIndent(texto), C.detectFloatKeys(texto))).toBe(texto);
+});
+
+test("PeYa: al cambiar de horario se elimina la entrada anterior que ya nadie usa", () => {
+  const original = JSON.parse(cargar());
+  const items = original.catalog.items;
+  const entrada = (id, dias) => ({ id, type: "ScheduleEntry", startTime: "06:00:00", endTime: "23:59:59", weekDays: dias });
+
+  items["SCH-VIERNES"] = entrada("SCH-VIERNES", ["FRIDAY"]);
+  items["SCH-FULL-DTO"] = entrada("SCH-FULL-DTO", ["MONDAY", "TUESDAY"]);
+  items["SCH-VIE-SAB-DOM"] = entrada("SCH-VIE-SAB-DOM", ["FRIDAY", "SATURDAY", "SUNDAY"]);
+  items["SCH-HUERFANO"] = entrada("SCH-HUERFANO", ["MONDAY", "SUNDAY"]);
+  items.BEBIDAS = { id: "BEBIDAS", type: "Category", title: { default: "Bebidas" }, products: {} };
+  items.POSTRES.products["SCH-VIE-SAB-DOM"] = { id: "SCH-VIE-SAB-DOM", type: "ScheduleEntry" };
+  items.BEBIDAS.products["SCH-VIE-SAB-DOM"] = { id: "SCH-VIE-SAB-DOM", type: "ScheduleEntry" };
+
+  const actual = JSON.parse(JSON.stringify(original));
+
+  // otra categoría aún la usa: se conserva
+  C.PEYA.setCategorySchedule(actual, "POSTRES", { dias: ["FRIDAY"], especiales: [] });
+  expect(C.PEYA.categorySchedules(actual, "POSTRES")).toEqual(["SCH-VIERNES"]);
+  expect(actual.catalog.items["SCH-VIE-SAB-DOM"]).toBeDefined();
+
+  // la última categoría que la usaba la deja: se elimina
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: ["FRIDAY"], especiales: [] });
+  expect(actual.catalog.items["SCH-VIE-SAB-DOM"]).toBeUndefined();
+
+  // no se tocan: el día base, el horario especial ni entradas que ya estaban sin uso en el original
+  expect(actual.catalog.items["SCH-VIERNES"]).toBeDefined();
+  expect(actual.catalog.items["SCH-FULL-DTO"]).toBeDefined();
+  expect(actual.catalog.items["SCH-HUERFANO"]).toBeDefined();
+
+  // un horario especial que se deja de usar tampoco se elimina
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: [], especiales: ["SCH-FULL-DTO"] });
+  C.PEYA.setCategorySchedule(actual, "BEBIDAS", { dias: ["FRIDAY"], especiales: [] });
+  expect(actual.catalog.items["SCH-FULL-DTO"]).toBeDefined();
+});
+
 const cargarFixture = leer;
 
 describe("Rappi", () => {

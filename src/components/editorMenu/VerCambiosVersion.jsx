@@ -82,6 +82,7 @@ export default function VerCambiosVersion({ version, token, fecha, onCerrar }) {
       );
       const ordenCategoria = cambios.find((x) => x.tipo === "orden_categoria" && x.catId === c.id);
       const reordenada = cambios.some((x) => x.tipo === "reordenado" && x.catId === c.id);
+      const horario = cambios.find((x) => x.tipo === "horario" && x.catId === c.id);
 
       return {
         ...c,
@@ -89,7 +90,9 @@ export default function VerCambiosVersion({ version, token, fecha, onCerrar }) {
         salieron,
         ordenCategoria,
         reordenada,
-        conCambios: modificados + salieron.length > 0 || Boolean(ordenCategoria) || reordenada
+        horario,
+        conCambios:
+          modificados + salieron.length > 0 || Boolean(ordenCategoria) || reordenada || Boolean(horario)
       };
     });
   }, [menu, cambios, porProducto]);
@@ -252,6 +255,12 @@ export default function VerCambiosVersion({ version, token, fecha, onCerrar }) {
                         <span className="em-chip">
                           Orden de categoría {categoria.ordenCategoria.antes ?? "—"} →{" "}
                           {categoria.ordenCategoria.despues ?? "—"}
+                        </span>
+                      )}
+                      {categoria.horario && (
+                        <span className="em-chip">
+                          Horario {categoria.horario.antes.join(", ") || "todos los días"} →{" "}
+                          {categoria.horario.despues.join(", ") || "todos los días"}
                         </span>
                       )}
                       {categoria.reordenada && <span className="em-chip">Productos reordenados</span>}

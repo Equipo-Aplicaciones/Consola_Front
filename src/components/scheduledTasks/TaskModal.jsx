@@ -384,10 +384,6 @@ function agregarArticulo() {
                 <Form.Check className="text-nowrap" label="Requiere confirmación" name="requiere_confirmacion" checked={form.requiere_confirmacion}
                   onChange={onChange} title="Tarea no se ejecuta automaticamente, requiere ejecución manual"
                 />
-
-                <Form.Check className="text-nowrap" label="Omitir próxima desactivación" name="omitir_proxima_desactivacion" checked={Boolean(form.omitir_proxima_desactivacion)}
-                  onChange={onChange} title="La próxima vez que toque desactivar, se salta una sola vez y la marca se limpia sola"
-                />
               </Col>
             </Row>
 

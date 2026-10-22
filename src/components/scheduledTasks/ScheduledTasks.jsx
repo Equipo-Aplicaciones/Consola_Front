@@ -65,18 +65,21 @@ function ScheduledTasks({token}) {
         }
       );
 
+      const data = await res.json().catch(() => ({}));
+
       if(!res.ok){
-        throw new Error("Error ejecutando tarea");
+        throw new Error(data.message || "Error ejecutando tarea");
       }
-      alert("✅ Tarea ejecutada correctamente");
-      setRunningTaskId(null);
-      setRunningType(null);
-      setProgress(0);
+      alert(`${data.ok ? "✅" : "⚠️"} ${data.message || "Tarea ejecutada"}`);
       cargarTareas();
 
     }catch(err){
       console.error(err);
-      alert("❌ Error ejecutando tarea");
+      alert(`❌ ${err.message || "Error ejecutando tarea"}`);
+    }finally{
+      setRunningTaskId(null);
+      setRunningType(null);
+      setProgress(0);
     }
   };
 
@@ -94,18 +97,21 @@ function ScheduledTasks({token}) {
         }
       );
 
+      const data = await res.json().catch(() => ({}));
+
       if(!res.ok){
-        throw new Error("Error reintentando tarea");
+        throw new Error(data.message || "Error reintentando tarea");
       }
-      alert("✅ Reintento ejecutado");
-      setRunningTaskId(null);
-      setRunningType(null);
-      setProgress(0);
+      alert(`${data.ok ? "✅" : "⚠️"} ${data.message || "Reintento ejecutado"}`);
       cargarTareas();
 
     }catch(err){
       console.error(err);
-      alert("❌ Error en reintento");
+      alert(`❌ ${err.message || "Error en reintento"}`);
+    }finally{
+      setRunningTaskId(null);
+      setRunningType(null);
+      setProgress(0);
     }
   };
 

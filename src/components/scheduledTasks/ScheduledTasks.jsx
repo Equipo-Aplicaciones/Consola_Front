@@ -133,6 +133,7 @@ function ScheduledTasks({token}) {
 
   const obtenerDia = (dia) => {
     const dias = {
+      0: "Todos los días",
       1: "Lunes",
       2: "Martes",
       3: "Miércoles",

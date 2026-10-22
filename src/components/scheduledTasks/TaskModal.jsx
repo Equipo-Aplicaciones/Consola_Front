@@ -3,6 +3,7 @@ import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 
 const dias = [
+  { value: 0, label: "Todos los días" },
   { value: 1, label: "Lunes" },
   { value: 2, label: "Martes" },
   { value: 3, label: "Miércoles" },
@@ -110,7 +111,7 @@ export default function TaskModal({show,onClose,refresh,task,token}) {
         tabla_objetivo: data.tabla_objetivo ?? ""
       });
 
-      setAutomatico(!!data.dia_activar);
+      setAutomatico(data.dia_activar !== null && data.dia_activar !== undefined);
 
       setEmpresasSeleccionadas(data.empresas ?? []);
 
@@ -382,6 +383,11 @@ function agregarArticulo() {
                 />
               </Col>
             </Row>
+
+            <div className="small text-muted mt-2">
+              La activación corre a las 09:30. Si la tarea se desactiva el mismo día en que se activa
+              (por ejemplo, "Todos los días" en ambos), la desactivación corre a las 12:00.
+            </div>
 
             <hr />
 

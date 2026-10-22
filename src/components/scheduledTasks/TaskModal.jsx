@@ -3,6 +3,7 @@ import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 
 const dias = [
+  { value: 0, label: "Todos los días" },
   { value: 1, label: "Lunes" },
   { value: 2, label: "Martes" },
   { value: 3, label: "Miércoles" },
@@ -39,7 +40,6 @@ export default function TaskModal({show,onClose,refresh,task,token}) {
     requiere_confirmacion: false,
     dia_activar: "",
     dia_desactivar: "",
-    omitir_proxima_desactivacion: false,
     tipo_accion: "",
     campo_objetivo: "invisibl",
     tabla_objetivo: ""
@@ -50,26 +50,40 @@ export default function TaskModal({show,onClose,refresh,task,token}) {
   const [empresasDisponibles, setEmpresasDisponibles] = useState([]);
   const [empresasSeleccionadas, setEmpresasSeleccionadas] = useState([]);
 
-  useEffect(() => {
-    async function cargarEmpresas() {
-      try {
-        const res = await fetch(
-          `${API_BASE_URL}/scheduled-tasks/empresas-disponibles`,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        );
-        const data = await res.json();
-        if (res.ok) {
-          setEmpresasDisponibles(data);
-        }
-      } catch (err) {
-        console.error("Error cargando empresas:", err);
-      }
-    }
+  const [errorEmpresas, setErrorEmpresas] = useState("");
 
-    cargarEmpresas();
+  const cargarEmpresas = useCallback(async () => {
+    setErrorEmpresas("");
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/scheduled-tasks/empresas-disponibles`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(
+          data.error || data.message || `Error ${res.status} al cargar las empresas`
+        );
+      }
+
+      setEmpresasDisponibles(data);
+    } catch (err) {
+      console.error("Error cargando empresas:", err);
+      setErrorEmpresas(err.message || "No se pudo conectar con el servidor");
+    }
   }, [token]);
+
+  // Se vuelve a pedir cada vez que se abre el formulario, para no quedarse con una lista vacía
+  // si la primera carga falló.
+  useEffect(() => {
+    if (show) {
+      cargarEmpresas();
+    }
+  }, [show, cargarEmpresas]);
 
   function toggleEmpresa(empresaId) {
     setEmpresasSeleccionadas(prev =>
@@ -106,14 +120,12 @@ export default function TaskModal({show,onClose,refresh,task,token}) {
         requiere_confirmacion: data.requiere_confirmacion,
         dia_activar: data.dia_activar ?? "",
         dia_desactivar: data.dia_desactivar ?? "",
-        omitir_proxima_desactivacion:
-          data.omitir_proxima_desactivacion,
         tipo_accion: data.tipo_accion || "TOGGLE_ARTICULO",
         campo_objetivo: data.campo_objetivo || "invisibl",
         tabla_objetivo: data.tabla_objetivo ?? ""
       });
 
-      setAutomatico(!!data.dia_activar);
+      setAutomatico(data.dia_activar !== null && data.dia_activar !== undefined);
 
       setEmpresasSeleccionadas(data.empresas ?? []);
 
@@ -147,7 +159,6 @@ export default function TaskModal({show,onClose,refresh,task,token}) {
       requiere_confirmacion: false,
       dia_activar: "",
       dia_desactivar: "",
-      omitir_proxima_desactivacion: false,
       tipo_accion: "",
       campo_objetivo: "invisibl",
       tabla_objetivo: ""
@@ -330,6 +341,17 @@ function agregarArticulo() {
                 onChange={() => toggleEmpresa(empresa.id)}
               />
             ))}
+            {errorEmpresas && (
+              <span className="text-danger small">
+                {errorEmpresas}{" "}
+                <Button size="sm" variant="link" className="p-0 align-baseline" onClick={cargarEmpresas}>
+                  Reintentar
+                </Button>
+              </span>
+            )}
+            {!errorEmpresas && !empresasDisponibles.length && (
+              <span className="text-muted small">No hay empresas disponibles.</span>
+            )}
           </Form.Group>
         )}
 
@@ -387,58 +409,53 @@ function agregarArticulo() {
               </Col>
             </Row>
 
-            <hr />
+            <div className="small text-muted mt-2">
+              La activación corre a las 09:30. Si la tarea se desactiva el mismo día en que se activa
+              (por ejemplo, "Todos los días" en ambos), la desactivación corre a las 12:00.
+            </div>
 
-            <Form.Group className="mb-3">
-              <Form.Label className="me-2 mb-0">
+            <hr className="my-2" />
+
+            <div className="d-flex align-items-center flex-wrap gap-2 mb-2">
+              <Form.Label className="mb-0">
                 Campo a modificar
               </Form.Label>
-              <Form.Select name="campo_objetivo" value={form.campo_objetivo} onChange={onChange} >
+              <Form.Select size="sm" style={{ width: "200px" }} name="campo_objetivo" value={form.campo_objetivo} onChange={onChange} >
                 {camposToggle.map(c => (
                   <option key={c.value} value={c.value} >
                     {c.label}
                   </option>
                 ))}
               </Form.Select>
-            </Form.Group>
 
-            <hr />
-            <Row className="align-items-center mb-3">
+              <Form.Label className="mb-0 ms-md-3">
+                Artículo
+              </Form.Label>
+              <Form.Control
+                size="sm"
+                style={{ width: "110px" }}
+                value={nuevoArticulo}
+                placeholder="Código"
+                onChange={(e) => setNuevoArticulo(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    agregarArticulo();
+                  }
+                }}
+              />
+              <Button size="sm" onClick={agregarArticulo}>
+                <i className="bi bi-plus-lg"></i>
+              </Button>
+            </div>
 
-              <Col xs="auto">
-                <Form.Label className="mb-0">
-                  Artículo
-                </Form.Label>
-              </Col>
-
-              <Col xs="auto">
-                <Form.Control
-                  style={{ width: "140px" }}
-                  value={nuevoArticulo}
-                  placeholder="Código"
-                  onChange={(e) => setNuevoArticulo(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      agregarArticulo();
-                    }
-                  }}
-                />
-              </Col>
-                <Col xs="auto">
-                  <Button onClick={agregarArticulo}>
-                    <i className="bi bi-plus-lg"></i>
-                  </Button>
-                </Col>
-            </Row>
-
-            <div className="d-flex flex-wrap gap-2 mb-2">
+            <div className="d-flex flex-wrap gap-1 mb-1">
               {articulos.map((codigo, index) => (
-                <div key={index} className="badge bg-primary d-flex align-items-center px-3 py-2"
-                style={{ fontSize: "0.95rem" }} >
+                <div key={index} className="badge bg-primary d-flex align-items-center px-2 py-1"
+                style={{ fontSize: "0.85rem" }} >
                   <span>{codigo}</span>
-                  <Button variant="link" className="text-white p-0 ms-2"
-                    style={{ textDecoration: "none", fontSize: "1rem", lineHeight: 1 }}
+                  <Button variant="link" className="text-white p-0 ms-1"
+                    style={{ textDecoration: "none", fontSize: "0.9rem", lineHeight: 1 }}
                     onClick={() => eliminarArticulo(index)} >
                     <i className="bi bi-x-lg"></i>
                   </Button>

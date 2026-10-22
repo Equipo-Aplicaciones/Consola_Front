@@ -29,6 +29,11 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   });
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [errorEdicion, setErrorEdicion] = useState("");
+  const [encargados, setEncargados] = useState([]);
+  const [reasignando, setReasignando] = useState(false);
+  const [encargadoNuevo, setEncargadoNuevo] = useState("");
+  const [guardandoEncargado, setGuardandoEncargado] = useState(false);
+  const [errorEncargado, setErrorEncargado] = useState("");
   const [detallesAbiertos, setDetallesAbiertos] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
@@ -104,6 +109,8 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
     setComentarioMasivo("");
     setEditando(false);
     setErrorEdicion("");
+    setReasignando(false);
+    setErrorEncargado("");
     setDetallesAbiertos(false);
     cargarEstados();
     cargarGestion();
@@ -685,6 +692,93 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   // Al editar, el bloque de detalles se mantiene abierto para no esconder los campos.
   const detallesVisibles = detallesAbiertos || editando;
 
+  const gestionCerrada =
+    gestion?.estado_codigo === "FINALIZADA" ||
+    gestion?.estado_codigo === "CANCELADA";
+
+  const iniciarReasignacion = async () => {
+    setErrorEncargado("");
+    setEncargadoNuevo(String(gestion.encargado_id ?? ""));
+    setReasignando(true);
+
+    if (encargados.length) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/gestiones/usuarios/encargados`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Error cargando encargados");
+
+      setEncargados(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setErrorEncargado(err.message || "Error cargando encargados");
+    }
+  };
+
+  const guardarEncargado = async () => {
+    if (!encargadoNuevo) {
+      setErrorEncargado("Seleccione un encargado.");
+      return;
+    }
+
+    if (Number(encargadoNuevo) === Number(gestion.encargado_id)) {
+      setReasignando(false);
+      return;
+    }
+
+    // Un N2 solo ve las gestiones que creó o que tiene asignadas: si la reasigna, la deja de ver.
+    const perderaAcceso =
+      role === "N2" &&
+      Number(gestion.creado_por) !== Number(user.id) &&
+      Number(encargadoNuevo) !== Number(user.id);
+
+    if (
+      perderaAcceso &&
+      !window.confirm("Esta gestión no la creaste tú: al reasignarla dejarás de verla. ¿Continuar?")
+    ) {
+      return;
+    }
+
+    setGuardandoEncargado(true);
+    setErrorEncargado("");
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/gestiones/${gestion.id}/encargado`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ encargado_id: Number(encargadoNuevo) })
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Error reasignando la gestión");
+
+      setReasignando(false);
+
+      if (perderaAcceso) {
+        if (refresh) await refresh();
+        onClose();
+        return;
+      }
+
+      setGestion(prev => ({
+        ...prev,
+        encargado_id: data.encargado_id,
+        encargado_nombre: data.encargado_nombre
+      }));
+
+      if (refresh) refresh();
+    } catch (err) {
+      setErrorEncargado(err.message || "Error reasignando la gestión");
+    } finally {
+      setGuardandoEncargado(false);
+    }
+  };
+
   const gestionBloqueada =
     gestion?.estado_codigo === "SUSPENDIDA" ||
     gestion?.estado_codigo === "FINALIZADA" ||
@@ -764,6 +858,24 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                 </div>
               </div>
 
+              <span className="small text-muted text-nowrap" title="Encargado de la gestión">
+                <i className="bi bi-person me-1" />
+                {gestion.encargado_nombre || "Sin asignar"}
+                {puedeAdministrarGestion && !gestionCerrada && !editando && (
+                  <Button
+                    size="sm"
+                    variant="link"
+                    className="py-0 px-1 ms-1 align-baseline"
+                    onClick={() => {
+                      setDetallesAbiertos(true);
+                      iniciarReasignacion();
+                    }}
+                  >
+                    Reasignar
+                  </Button>
+                )}
+              </span>
+
               <Badge
                 bg={badgeGestion(gestion.estado_codigo)}
                 className="fs-6"
@@ -818,6 +930,58 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                   Editar
                 </Button>
               )}
+            </div>
+
+            {/* ENCARGADO */}
+            <div className="d-flex align-items-center flex-wrap gap-2 mb-2">
+              <span className="text-muted small">
+                <i className="bi bi-person-check me-1" />
+                Encargado:
+              </span>
+
+              {reasignando ? (
+                <>
+                  <Form.Select
+                    size="sm"
+                    style={{ width: 260 }}
+                    value={encargadoNuevo}
+                    disabled={guardandoEncargado}
+                    onChange={e => setEncargadoNuevo(e.target.value)}
+                  >
+                    <option value="">Seleccione encargado</option>
+                    {encargados.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name} ({u.role})
+                      </option>
+                    ))}
+                  </Form.Select>
+
+                  <Button size="sm" variant="primary" disabled={guardandoEncargado} onClick={guardarEncargado}>
+                    {guardandoEncargado ? "Guardando..." : "Guardar"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline-secondary"
+                    disabled={guardandoEncargado}
+                    onClick={() => setReasignando(false)}
+                  >
+                    Cancelar
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <strong>{gestion.encargado_nombre || "Sin asignar"}</strong>
+
+                  {puedeAdministrarGestion && !gestionCerrada && (
+                    <Button size="sm" variant="outline-secondary" onClick={iniciarReasignacion}>
+                      <i className="bi bi-arrow-left-right me-1" />
+                      Reasignar
+                    </Button>
+                  )}
+                </>
+              )}
+
+              {errorEncargado && <span className="text-danger small">{errorEncargado}</span>}
             </div>
 
             {errorEdicion && (

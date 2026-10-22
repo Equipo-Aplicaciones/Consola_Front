@@ -39,7 +39,6 @@ export default function TaskModal({show,onClose,refresh,task,token}) {
     requiere_confirmacion: false,
     dia_activar: "",
     dia_desactivar: "",
-    omitir_proxima_desactivacion: false,
     tipo_accion: "",
     campo_objetivo: "invisibl",
     tabla_objetivo: ""
@@ -106,8 +105,6 @@ export default function TaskModal({show,onClose,refresh,task,token}) {
         requiere_confirmacion: data.requiere_confirmacion,
         dia_activar: data.dia_activar ?? "",
         dia_desactivar: data.dia_desactivar ?? "",
-        omitir_proxima_desactivacion:
-          data.omitir_proxima_desactivacion,
         tipo_accion: data.tipo_accion || "TOGGLE_ARTICULO",
         campo_objetivo: data.campo_objetivo || "invisibl",
         tabla_objetivo: data.tabla_objetivo ?? ""
@@ -147,7 +144,6 @@ export default function TaskModal({show,onClose,refresh,task,token}) {
       requiere_confirmacion: false,
       dia_activar: "",
       dia_desactivar: "",
-      omitir_proxima_desactivacion: false,
       tipo_accion: "",
       campo_objetivo: "invisibl",
       tabla_objetivo: ""

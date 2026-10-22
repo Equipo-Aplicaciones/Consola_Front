@@ -414,58 +414,48 @@ function agregarArticulo() {
               (por ejemplo, "Todos los días" en ambos), la desactivación corre a las 12:00.
             </div>
 
-            <hr />
+            <hr className="my-2" />
 
-            <Form.Group className="mb-3">
-              <Form.Label className="me-2 mb-0">
+            <div className="d-flex align-items-center flex-wrap gap-2 mb-2">
+              <Form.Label className="mb-0">
                 Campo a modificar
               </Form.Label>
-              <Form.Select name="campo_objetivo" value={form.campo_objetivo} onChange={onChange} >
+              <Form.Select size="sm" style={{ width: "200px" }} name="campo_objetivo" value={form.campo_objetivo} onChange={onChange} >
                 {camposToggle.map(c => (
                   <option key={c.value} value={c.value} >
                     {c.label}
                   </option>
                 ))}
               </Form.Select>
-            </Form.Group>
 
-            <hr />
-            <Row className="align-items-center mb-3">
+              <Form.Label className="mb-0 ms-md-3">
+                Artículo
+              </Form.Label>
+              <Form.Control
+                size="sm"
+                style={{ width: "110px" }}
+                value={nuevoArticulo}
+                placeholder="Código"
+                onChange={(e) => setNuevoArticulo(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    agregarArticulo();
+                  }
+                }}
+              />
+              <Button size="sm" onClick={agregarArticulo}>
+                <i className="bi bi-plus-lg"></i>
+              </Button>
+            </div>
 
-              <Col xs="auto">
-                <Form.Label className="mb-0">
-                  Artículo
-                </Form.Label>
-              </Col>
-
-              <Col xs="auto">
-                <Form.Control
-                  style={{ width: "140px" }}
-                  value={nuevoArticulo}
-                  placeholder="Código"
-                  onChange={(e) => setNuevoArticulo(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      agregarArticulo();
-                    }
-                  }}
-                />
-              </Col>
-                <Col xs="auto">
-                  <Button onClick={agregarArticulo}>
-                    <i className="bi bi-plus-lg"></i>
-                  </Button>
-                </Col>
-            </Row>
-
-            <div className="d-flex flex-wrap gap-2 mb-2">
+            <div className="d-flex flex-wrap gap-1 mb-1">
               {articulos.map((codigo, index) => (
-                <div key={index} className="badge bg-primary d-flex align-items-center px-3 py-2"
-                style={{ fontSize: "0.95rem" }} >
+                <div key={index} className="badge bg-primary d-flex align-items-center px-2 py-1"
+                style={{ fontSize: "0.85rem" }} >
                   <span>{codigo}</span>
-                  <Button variant="link" className="text-white p-0 ms-2"
-                    style={{ textDecoration: "none", fontSize: "1rem", lineHeight: 1 }}
+                  <Button variant="link" className="text-white p-0 ms-1"
+                    style={{ textDecoration: "none", fontSize: "0.9rem", lineHeight: 1 }}
                     onClick={() => eliminarArticulo(index)} >
                     <i className="bi bi-x-lg"></i>
                   </Button>

@@ -50,26 +50,40 @@ export default function TaskModal({show,onClose,refresh,task,token}) {
   const [empresasDisponibles, setEmpresasDisponibles] = useState([]);
   const [empresasSeleccionadas, setEmpresasSeleccionadas] = useState([]);
 
-  useEffect(() => {
-    async function cargarEmpresas() {
-      try {
-        const res = await fetch(
-          `${API_BASE_URL}/scheduled-tasks/empresas-disponibles`,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        );
-        const data = await res.json();
-        if (res.ok) {
-          setEmpresasDisponibles(data);
-        }
-      } catch (err) {
-        console.error("Error cargando empresas:", err);
-      }
-    }
+  const [errorEmpresas, setErrorEmpresas] = useState("");
 
-    cargarEmpresas();
+  const cargarEmpresas = useCallback(async () => {
+    setErrorEmpresas("");
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/scheduled-tasks/empresas-disponibles`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(
+          data.error || data.message || `Error ${res.status} al cargar las empresas`
+        );
+      }
+
+      setEmpresasDisponibles(data);
+    } catch (err) {
+      console.error("Error cargando empresas:", err);
+      setErrorEmpresas(err.message || "No se pudo conectar con el servidor");
+    }
   }, [token]);
+
+  // Se vuelve a pedir cada vez que se abre el formulario, para no quedarse con una lista vacía
+  // si la primera carga falló.
+  useEffect(() => {
+    if (show) {
+      cargarEmpresas();
+    }
+  }, [show, cargarEmpresas]);
 
   function toggleEmpresa(empresaId) {
     setEmpresasSeleccionadas(prev =>
@@ -327,6 +341,17 @@ function agregarArticulo() {
                 onChange={() => toggleEmpresa(empresa.id)}
               />
             ))}
+            {errorEmpresas && (
+              <span className="text-danger small">
+                {errorEmpresas}{" "}
+                <Button size="sm" variant="link" className="p-0 align-baseline" onClick={cargarEmpresas}>
+                  Reintentar
+                </Button>
+              </span>
+            )}
+            {!errorEmpresas && !empresasDisponibles.length && (
+              <span className="text-muted small">No hay empresas disponibles.</span>
+            )}
           </Form.Group>
         )}
 

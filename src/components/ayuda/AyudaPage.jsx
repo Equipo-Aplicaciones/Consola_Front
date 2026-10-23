@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge, Button, Col, Form, Modal, Row, Spinner } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
+import ContactosAyuda from "./ContactosAyuda";
+import { ROLES } from "./roles";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const ROLES = ["Admin", "N1", "N2", "Gerente", "RRHH", "Comercial", "Zonal"];
 const LIMITE_LINEAS = (lineas) => ({
   display: "-webkit-box",
   WebkitLineClamp: lineas,
@@ -25,6 +26,43 @@ function normalizar(texto) {
 }
 
 export default function AyudaPage({ token, role }) {
+  const [vista, setVista] = useState("documentos");
+
+  return (
+    <div className="container-fluid">
+      <h4 className="mb-3">
+        <i className="bi bi-question-circle me-2" />
+        Ayuda
+      </h4>
+
+      <ul className="nav nav-tabs mb-3">
+        {[
+          ["documentos", "bi bi-file-earmark-pdf", "Documentos"],
+          ["contactos", "bi bi-telephone", "Contactos"]
+        ].map(([clave, icono, etiqueta]) => (
+          <li className="nav-item" key={clave}>
+            <button
+              type="button"
+              className={`nav-link ${vista === clave ? "active" : ""}`}
+              onClick={() => setVista(clave)}
+            >
+              <i className={`${icono} me-1`} />
+              {etiqueta}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {vista === "documentos" ? (
+        <DocumentosAyuda token={token} role={role} />
+      ) : (
+        <ContactosAyuda token={token} role={role} />
+      )}
+    </div>
+  );
+}
+
+function DocumentosAyuda({ token, role }) {
   const esAdmin = role === "Admin";
   const [documentos, setDocumentos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -223,23 +261,9 @@ export default function AyudaPage({ token, role }) {
   };
 
   return (
-    <div className="container-fluid">
-      <div className="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
-        <h4 className="mb-0">
-          <i className="bi bi-question-circle me-2" />
-          Ayuda
-        </h4>
-
-        {esAdmin && (
-          <Button size="sm" variant="primary" onClick={() => abrirFormulario()}>
-            <i className="bi bi-upload me-1" />
-            Subir documento
-          </Button>
-        )}
-      </div>
-
-      <div className="row g-2 mb-3">
-        <div className="col-12 col-md-8">
+    <div>
+      <div className="row g-2 mb-3 align-items-center">
+        <div className="col-12 col-md-7">
           <div className="input-group">
             <span className="input-group-text">
               <i className="bi bi-search" />
@@ -257,7 +281,7 @@ export default function AyudaPage({ token, role }) {
           </div>
         </div>
 
-        <div className="col-12 col-md-4">
+        <div className="col col-md-3">
           <Form.Select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
             <option value="">Todas las categorías</option>
             {categorias.map((c) => (
@@ -267,6 +291,15 @@ export default function AyudaPage({ token, role }) {
             ))}
           </Form.Select>
         </div>
+
+        {esAdmin && (
+          <div className="col-auto">
+            <Button size="sm" variant="primary" onClick={() => abrirFormulario()}>
+              <i className="bi bi-upload me-1" />
+              Subir documento
+            </Button>
+          </div>
+        )}
       </div>
 
       {error && <div className="alert alert-danger py-2">{error}</div>}

@@ -839,27 +839,29 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                   </h4>
                 )}
 
-                {/* RESUMEN DE ESTADOS */}
-                <div className="d-flex flex-wrap gap-1">
-                  <Badge bg="success">
-                    Terminados: {resumen.terminado}
-                  </Badge>
+                {/* RESUMEN DE ESTADOS (se oculta mientras se edita) */}
+                {!editando && (
+                  <div className="d-flex flex-wrap gap-1">
+                    <Badge bg="success">
+                      Terminados: {resumen.terminado}
+                    </Badge>
 
-                  <Badge
-                    bg="warning"
-                    text="dark"
-                  >
-                    Pendientes: {resumen.pendiente}
-                  </Badge>
+                    <Badge
+                      bg="warning"
+                      text="dark"
+                    >
+                      Pendientes: {resumen.pendiente}
+                    </Badge>
 
-                  <Badge bg="danger">
-                    No aplicados: {resumen.noAplicado}
-                  </Badge>
+                    <Badge bg="danger">
+                      No aplicados: {resumen.noAplicado}
+                    </Badge>
 
-                  <Badge bg="secondary">
-                    No aplica: {resumen.noAplica}
-                  </Badge>
-                </div>
+                    <Badge bg="secondary">
+                      No aplica: {resumen.noAplica}
+                    </Badge>
+                  </div>
+                )}
               </div>
 
               <span className="d-inline-flex align-items-center gap-1 text-nowrap">

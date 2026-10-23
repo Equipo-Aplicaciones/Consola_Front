@@ -19,9 +19,6 @@ function normalizar(texto) {
     .toLowerCase();
 }
 
-// Para el enlace tel: solo importan los dígitos y el +
-const telefonoMarcable = (telefono) => String(telefono).replace(/[^\d+]/g, "");
-
 export default function ContactosAyuda({ token, role }) {
   const esAdmin = role === "Admin";
   const [contactos, setContactos] = useState([]);
@@ -195,11 +192,9 @@ export default function ContactosAyuda({ token, role }) {
                     {c.nombre}
                   </h6>
 
-                  <div>
-                    <a href={`tel:${telefonoMarcable(c.telefono)}`} className="fw-semibold text-decoration-none">
-                      <i className="bi bi-telephone me-1" />
-                      {c.telefono}
-                    </a>
+                  <div className="fw-semibold">
+                    <i className="bi bi-telephone me-1" />
+                    {c.telefono}
                   </div>
 
                   {c.descripcion && (

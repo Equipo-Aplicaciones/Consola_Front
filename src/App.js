@@ -182,7 +182,16 @@ function App() {
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem("authUser");
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+
+      // Las sesiones iniciadas antes de corregir el login guardaron el password_hash: se quita de ahí.
+      const { password_hash, ...seguro } = JSON.parse(saved);
+
+      if (password_hash !== undefined) {
+        localStorage.setItem("authUser", JSON.stringify(seguro));
+      }
+
+      return seguro;
     } catch {
       return null;
     }

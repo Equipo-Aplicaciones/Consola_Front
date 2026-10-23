@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Modal, Button, Form, Badge, Table, Collapse } from "react-bootstrap";
+import { Modal, Button, Form, Badge, Table, Collapse, Dropdown } from "react-bootstrap";
 import * as XLSX from "xlsx";
 import { API_BASE_URL } from "../../config";
 import FiltroEstados from "./FiltroEstados";
@@ -29,6 +29,9 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   });
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [errorEdicion, setErrorEdicion] = useState("");
+  const [encargados, setEncargados] = useState([]);
+  const [guardandoEncargado, setGuardandoEncargado] = useState(false);
+  const [errorEncargado, setErrorEncargado] = useState("");
   const [detallesAbiertos, setDetallesAbiertos] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
@@ -104,6 +107,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
     setComentarioMasivo("");
     setEditando(false);
     setErrorEdicion("");
+    setErrorEncargado("");
     setDetallesAbiertos(false);
     cargarEstados();
     cargarGestion();
@@ -685,6 +689,89 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   // Al editar, el bloque de detalles se mantiene abierto para no esconder los campos.
   const detallesVisibles = detallesAbiertos || editando;
 
+  const gestionCerrada =
+    gestion?.estado_codigo === "FINALIZADA" ||
+    gestion?.estado_codigo === "CANCELADA";
+
+  const cargarEncargados = async () => {
+    if (encargados.length) return;
+
+    setErrorEncargado("");
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/gestiones/usuarios/encargados`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Error cargando encargados");
+
+      setEncargados(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setErrorEncargado(err.message || "Error cargando encargados");
+    }
+  };
+
+  // Se elige a alguien en el menú de "Reasignar": se pide confirmación y se guarda de inmediato.
+  const reasignarA = async (usuario) => {
+    if (Number(usuario.id) === Number(gestion.encargado_id)) {
+      return;
+    }
+
+    // Un N2 solo ve las gestiones que creó o que tiene asignadas: si la reasigna, la deja de ver.
+    const perderaAcceso =
+      role === "N2" &&
+      Number(gestion.creado_por) !== Number(user.id) &&
+      Number(usuario.id) !== Number(user.id);
+
+    const anterior = gestion.encargado_nombre || "sin encargado";
+
+    const mensaje =
+      `¿Reasignar la gestión "${gestion.nombre}" de ${anterior} a ${usuario.full_name}?` +
+      (perderaAcceso
+        ? "\n\nEsta gestión no la creaste tú: al reasignarla dejarás de verla."
+        : "");
+
+    if (!window.confirm(mensaje)) {
+      return;
+    }
+
+    setGuardandoEncargado(true);
+    setErrorEncargado("");
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/gestiones/${gestion.id}/encargado`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ encargado_id: Number(usuario.id) })
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Error reasignando la gestión");
+
+      if (perderaAcceso) {
+        if (refresh) await refresh();
+        onClose();
+        return;
+      }
+
+      setGestion(prev => ({
+        ...prev,
+        encargado_id: data.encargado_id,
+        encargado_nombre: data.encargado_nombre
+      }));
+
+      if (refresh) refresh();
+    } catch (err) {
+      setErrorEncargado(err.message || "Error reasignando la gestión");
+    } finally {
+      setGuardandoEncargado(false);
+    }
+  };
+
   const gestionBloqueada =
     gestion?.estado_codigo === "SUSPENDIDA" ||
     gestion?.estado_codigo === "FINALIZADA" ||
@@ -722,6 +809,17 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
           </div>
         ) : (
           <>
+            {/* En modo edición todo el bloque toma un fondo suave para que se note que es editable */}
+            <div
+              className="rounded"
+              style={{
+                background: editando ? "#fff8e1" : "transparent",
+                border: `1px solid ${editando ? "#ffe69c" : "transparent"}`,
+                padding: editando ? "8px 10px 2px" : 0,
+                marginBottom: editando ? 8 : 0,
+                transition: "background-color .2s, border-color .2s"
+              }}
+            >
             {/* CABECERA: nombre, resumen de estados y botón para mostrar/ocultar los detalles */}
             <div className="d-flex align-items-center flex-wrap gap-2 mb-2">
               <div className="d-flex align-items-center flex-wrap gap-2 flex-grow-1" style={{ minWidth: 0 }}>
@@ -741,28 +839,79 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                   </h4>
                 )}
 
-                {/* RESUMEN DE ESTADOS */}
-                <div className="d-flex flex-wrap gap-1">
-                  <Badge bg="success">
-                    Terminados: {resumen.terminado}
-                  </Badge>
+                {/* RESUMEN DE ESTADOS (se oculta mientras se edita) */}
+                {!editando && (
+                  <div className="d-flex flex-wrap gap-1">
+                    <Badge bg="success">
+                      Terminados: {resumen.terminado}
+                    </Badge>
 
-                  <Badge
-                    bg="warning"
-                    text="dark"
-                  >
-                    Pendientes: {resumen.pendiente}
-                  </Badge>
+                    <Badge
+                      bg="warning"
+                      text="dark"
+                    >
+                      Pendientes: {resumen.pendiente}
+                    </Badge>
 
-                  <Badge bg="danger">
-                    No aplicados: {resumen.noAplicado}
-                  </Badge>
+                    <Badge bg="danger">
+                      No aplicados: {resumen.noAplicado}
+                    </Badge>
 
-                  <Badge bg="secondary">
-                    No aplica: {resumen.noAplica}
-                  </Badge>
-                </div>
+                    <Badge bg="secondary">
+                      No aplica: {resumen.noAplica}
+                    </Badge>
+                  </div>
+                )}
               </div>
+
+              <span className="d-inline-flex align-items-center gap-1 text-nowrap">
+                {editando && puedeAdministrarGestion && !gestionCerrada ? (
+                  <Dropdown align="end" onToggle={(abierto) => abierto && cargarEncargados()}>
+                    <Dropdown.Toggle
+                      size="sm"
+                      variant="outline-primary"
+                      title="Reasignar encargado"
+                      aria-label="Reasignar encargado"
+                      disabled={guardandoEncargado}
+                      className="sin-flecha py-0 px-1 d-inline-flex align-items-center"
+                    >
+                      {guardandoEncargado ? (
+                        <span className="spinner-border spinner-border-sm" />
+                      ) : (
+                        <i className="bi bi-person" style={{ fontSize: "1.3rem", lineHeight: 1.3 }} />
+                      )}
+                    </Dropdown.Toggle>
+
+                    <Dropdown.Menu style={{ maxHeight: 280, overflowY: "auto" }}>
+                      <Dropdown.Header>Reasignar a…</Dropdown.Header>
+
+                      {!encargados.length && !errorEncargado && (
+                        <Dropdown.ItemText className="text-muted small">Cargando...</Dropdown.ItemText>
+                      )}
+
+                      {encargados.map(u => (
+                        <Dropdown.Item
+                          key={u.id}
+                          active={Number(u.id) === Number(gestion.encargado_id)}
+                          onClick={() => reasignarA(u)}
+                        >
+                          {u.full_name} <span className="small opacity-75">({u.role})</span>
+                        </Dropdown.Item>
+                      ))}
+                    </Dropdown.Menu>
+                  </Dropdown>
+                ) : (
+                  <i
+                    className="bi bi-person text-muted"
+                    style={{ fontSize: "1.3rem", lineHeight: 1.3 }}
+                    title="Encargado de la gestión"
+                  />
+                )}
+
+                <span className="small text-muted" title="Encargado de la gestión">
+                  {gestion.encargado_nombre || "Sin asignar"}
+                </span>
+              </span>
 
               <Badge
                 bg={badgeGestion(gestion.estado_codigo)}
@@ -819,6 +968,10 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                 </Button>
               )}
             </div>
+
+            {errorEncargado && (
+              <div className="text-danger small mb-2">{errorEncargado}</div>
+            )}
 
             {errorEdicion && (
               <div className="alert alert-danger py-2">
@@ -910,7 +1063,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
               <div className="d-flex justify-content-end gap-2 mb-3">
                 <Button
                   size="sm"
-                  variant="secondary"
+                  variant="danger"
                   onClick={cancelarEdicion}
                   disabled={guardandoEdicion}
                 >
@@ -949,6 +1102,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
               </div>
               </div>
             </Collapse>
+            </div>
 
             {/* GESTIÓN SUSPENDIDA */}
             {gestion.estado_codigo === "SUSPENDIDA" && (

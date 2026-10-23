@@ -267,3 +267,8 @@ h2 {
 .gestion-detalle-content {
   min-height: min(calc(100vh - 3.5rem), 720px);
 }
+
+/* Botón desplegable que solo muestra un ícono, sin la flecha de Bootstrap */
+.sin-flecha::after {
+  display: none !important;
+}

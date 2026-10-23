@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Col, Collapse, Form, Modal, Row, Spinner } from "react-bootstrap";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button, Col, Form, Modal, Overlay, Popover, Row, Spinner } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 import { ROLES } from "./roles";
 
@@ -29,13 +29,15 @@ export default function ContactosAyuda({ token, role }) {
   const [form, setForm] = useState(FORM_VACIO);
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState("");
-  const [abiertos, setAbiertos] = useState({});
+  const [abierto, setAbierto] = useState(null);
+  const anclas = useRef({});
 
-  // El detalle (descripción, roles, enlace y botones) está oculto hasta que se hace clic en el contacto
+  // El detalle (descripción, roles, enlace y botones) se muestra en un panel flotante al hacer clic en el
+  // contacto, para que la tarjeta no cambie de tamaño.
   const alternarDetalle = (contacto) => {
     if (!contacto.descripcion && !contacto.link && !esAdmin) return;
 
-    setAbiertos((prev) => ({ ...prev, [contacto.id]: !prev[contacto.id] }));
+    setAbierto((prev) => (prev === contacto.id ? null : contacto.id));
   };
 
   const base = `${API_BASE_URL}/docs-ayuda/contactos`;
@@ -197,9 +199,12 @@ export default function ContactosAyuda({ token, role }) {
                 <div className="card-body d-flex flex-column gap-2" style={{ overflowWrap: "anywhere" }}>
                   <button
                     type="button"
+                    ref={(el) => {
+                      anclas.current[c.id] = el;
+                    }}
                     className="btn p-0 border-0 text-start d-flex align-items-start justify-content-between gap-2 w-100"
                     style={{ cursor: c.descripcion || c.link || esAdmin ? "pointer" : "default" }}
-                    aria-expanded={Boolean(abiertos[c.id])}
+                    aria-expanded={abierto === c.id}
                     title={c.descripcion || c.link || esAdmin ? "Clic para ver el detalle" : undefined}
                     onClick={() => alternarDetalle(c)}
                   >
@@ -210,7 +215,7 @@ export default function ContactosAyuda({ token, role }) {
 
                     {(c.descripcion || c.link || esAdmin) && (
                       <i
-                        className={`bi bi-chevron-${abiertos[c.id] ? "up" : "down"} text-muted flex-shrink-0`}
+                        className={`bi bi-chevron-${abierto === c.id ? "up" : "down"} text-muted flex-shrink-0`}
                       />
                     )}
                   </button>
@@ -220,50 +225,75 @@ export default function ContactosAyuda({ token, role }) {
                     {c.telefono}
                   </div>
 
-                  <Collapse in={Boolean(abiertos[c.id])}>
-                    <div>
-                      <div className="d-flex flex-column gap-2 pt-1">
-                        {c.descripcion && (
-                          <div className="text-muted small">{c.descripcion}</div>
+                </div>
+
+                <Overlay
+                  show={abierto === c.id}
+                  target={anclas.current[c.id]}
+                  placement="bottom-start"
+                  rootClose
+                  onHide={() => setAbierto((prev) => (prev === c.id ? null : prev))}
+                >
+                  <Popover id={`contacto-${c.id}`} style={{ maxWidth: 340, zIndex: 1050 }}>
+                    <Popover.Body className="d-flex flex-column gap-2" style={{ overflowWrap: "anywhere" }}>
+                      {c.descripcion && (
+                        <div className="text-muted small" style={{ maxHeight: 180, overflowY: "auto" }}>
+                          {c.descripcion}
+                        </div>
+                      )}
+
+                      {esAdmin && (
+                        <div className="small text-muted">
+                          <i className="bi bi-people me-1" />
+                          {c.roles_visibles?.length ? c.roles_visibles.join(", ") : "Todos los roles"}
+                        </div>
+                      )}
+
+                      <div className="d-flex gap-1">
+                        {c.link ? (
+                          <a
+                            className="btn btn-sm btn-outline-primary flex-grow-1"
+                            href={c.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <i className="bi bi-box-arrow-up-right me-1" />
+                            Abrir enlace
+                          </a>
+                        ) : (
+                          <span className="flex-grow-1" />
                         )}
 
                         {esAdmin && (
-                          <div className="small text-muted">
-                            <i className="bi bi-people me-1" />
-                            {c.roles_visibles?.length ? c.roles_visibles.join(", ") : "Todos los roles"}
-                          </div>
-                        )}
-
-                        <div className="d-flex gap-1">
-                          {c.link ? (
-                            <a
-                              className="btn btn-sm btn-outline-primary flex-grow-1"
-                              href={c.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline-secondary"
+                              title="Editar"
+                              onClick={() => {
+                                setAbierto(null);
+                                abrirFormulario(c);
+                              }}
                             >
-                              <i className="bi bi-box-arrow-up-right me-1" />
-                              Abrir enlace
-                            </a>
-                          ) : (
-                            <span className="flex-grow-1" />
-                          )}
-
-                          {esAdmin && (
-                            <>
-                              <Button size="sm" variant="outline-secondary" title="Editar" onClick={() => abrirFormulario(c)}>
-                                <i className="bi bi-pencil" />
-                              </Button>
-                              <Button size="sm" variant="outline-danger" title="Eliminar" onClick={() => eliminar(c)}>
-                                <i className="bi bi-trash" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
+                              <i className="bi bi-pencil" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline-danger"
+                              title="Eliminar"
+                              onClick={() => {
+                                setAbierto(null);
+                                eliminar(c);
+                              }}
+                            >
+                              <i className="bi bi-trash" />
+                            </Button>
+                          </>
+                        )}
                       </div>
-                    </div>
-                  </Collapse>
-                </div>
+                    </Popover.Body>
+                  </Popover>
+                </Overlay>
               </div>
             </div>
           ))}

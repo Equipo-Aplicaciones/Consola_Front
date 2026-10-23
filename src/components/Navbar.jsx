@@ -128,6 +128,9 @@ function MyNavbar({ user, onLogout, token }) {
 
       if (notif.url?.startsWith("/")) {
         navigate(notif.url);
+      } else if (notif.url === "gestiones" && role === "N1") {
+        // El N1 no entra a Administración: su módulo de gestiones es una página propia
+        navigate("/gestiones");
       } else {
         navigate("/admin", {
           state: {

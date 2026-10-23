@@ -862,9 +862,48 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                 </div>
               </div>
 
-              <span className="small text-muted text-nowrap" title="Encargado de la gestión">
-                <i className="bi bi-person me-1" />
-                {gestion.encargado_nombre || "Sin asignar"}
+              <span className="d-inline-flex align-items-center gap-1 text-nowrap">
+                <span className="small text-muted" title="Encargado de la gestión">
+                  <i className="bi bi-person-badge me-1" />
+                  {gestion.encargado_nombre || "Sin asignar"}
+                </span>
+
+                {editando && puedeAdministrarGestion && !gestionCerrada && (
+                  <Dropdown align="end" onToggle={(abierto) => abierto && cargarEncargados()}>
+                    <Dropdown.Toggle
+                      size="sm"
+                      variant="outline-primary"
+                      title="Reasignar encargado"
+                      aria-label="Reasignar encargado"
+                      disabled={guardandoEncargado}
+                      className="sin-flecha py-0 px-2"
+                    >
+                      {guardandoEncargado ? (
+                        <span className="spinner-border spinner-border-sm" />
+                      ) : (
+                        <i className="bi bi-arrow-left-right" />
+                      )}
+                    </Dropdown.Toggle>
+
+                    <Dropdown.Menu style={{ maxHeight: 280, overflowY: "auto" }}>
+                      <Dropdown.Header>Reasignar a…</Dropdown.Header>
+
+                      {!encargados.length && !errorEncargado && (
+                        <Dropdown.ItemText className="text-muted small">Cargando...</Dropdown.ItemText>
+                      )}
+
+                      {encargados.map(u => (
+                        <Dropdown.Item
+                          key={u.id}
+                          active={Number(u.id) === Number(gestion.encargado_id)}
+                          onClick={() => reasignarA(u)}
+                        >
+                          {u.full_name} <span className="small opacity-75">({u.role})</span>
+                        </Dropdown.Item>
+                      ))}
+                    </Dropdown.Menu>
+                  </Dropdown>
+                )}
               </span>
 
               <Badge
@@ -923,53 +962,9 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
               )}
             </div>
 
-            {/* ENCARGADO */}
-            <div className="d-flex align-items-center flex-wrap gap-2 mb-2">
-              <span className="text-muted small">
-                <i className="bi bi-person-check me-1" />
-                Encargado:
-              </span>
-
-              <strong>{gestion.encargado_nombre || "Sin asignar"}</strong>
-
-              {editando && puedeAdministrarGestion && !gestionCerrada && (
-                <Dropdown onToggle={(abierto) => abierto && cargarEncargados()}>
-                  <Dropdown.Toggle
-                    size="sm"
-                    variant="outline-primary"
-                    disabled={guardandoEncargado}
-                    className="d-inline-flex align-items-center"
-                  >
-                    {guardandoEncargado ? (
-                      <span className="spinner-border spinner-border-sm me-1" />
-                    ) : (
-                      <i className="bi bi-arrow-left-right me-1" />
-                    )}
-                    Reasignar
-                  </Dropdown.Toggle>
-
-                  <Dropdown.Menu style={{ maxHeight: 280, overflowY: "auto" }}>
-                    <Dropdown.Header>Elegir nuevo encargado</Dropdown.Header>
-
-                    {!encargados.length && !errorEncargado && (
-                      <Dropdown.ItemText className="text-muted small">Cargando...</Dropdown.ItemText>
-                    )}
-
-                    {encargados.map(u => (
-                      <Dropdown.Item
-                        key={u.id}
-                        active={Number(u.id) === Number(gestion.encargado_id)}
-                        onClick={() => reasignarA(u)}
-                      >
-                        {u.full_name} <span className="small opacity-75">({u.role})</span>
-                      </Dropdown.Item>
-                    ))}
-                  </Dropdown.Menu>
-                </Dropdown>
-              )}
-
-              {errorEncargado && <span className="text-danger small">{errorEncargado}</span>}
-            </div>
+            {errorEncargado && (
+              <div className="text-danger small mb-2">{errorEncargado}</div>
+            )}
 
             {errorEdicion && (
               <div className="alert alert-danger py-2">

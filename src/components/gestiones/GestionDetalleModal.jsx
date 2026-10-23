@@ -937,10 +937,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                     Reasignar
                   </Dropdown.Toggle>
 
-                  <Dropdown.Menu
-                    popperConfig={{ strategy: "fixed" }}
-                    style={{ maxHeight: 280, overflowY: "auto" }}
-                  >
+                  <Dropdown.Menu style={{ maxHeight: 280, overflowY: "auto" }}>
                     <Dropdown.Header>Elegir nuevo encargado</Dropdown.Header>
 
                     {!encargados.length && !errorEncargado && (

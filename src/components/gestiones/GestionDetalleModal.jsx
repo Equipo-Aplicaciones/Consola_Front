@@ -863,12 +863,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
               </div>
 
               <span className="d-inline-flex align-items-center gap-1 text-nowrap">
-                <span className="small text-muted" title="Encargado de la gestión">
-                  <i className="bi bi-person-badge me-1" />
-                  {gestion.encargado_nombre || "Sin asignar"}
-                </span>
-
-                {editando && puedeAdministrarGestion && !gestionCerrada && (
+                {editando && puedeAdministrarGestion && !gestionCerrada ? (
                   <Dropdown align="end" onToggle={(abierto) => abierto && cargarEncargados()}>
                     <Dropdown.Toggle
                       size="sm"
@@ -876,12 +871,12 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                       title="Reasignar encargado"
                       aria-label="Reasignar encargado"
                       disabled={guardandoEncargado}
-                      className="sin-flecha py-0 px-2"
+                      className="sin-flecha py-0 px-1 d-inline-flex align-items-center"
                     >
                       {guardandoEncargado ? (
                         <span className="spinner-border spinner-border-sm" />
                       ) : (
-                        <i className="bi bi-arrow-left-right" />
+                        <i className="bi bi-person" style={{ fontSize: "1.3rem", lineHeight: 1.3 }} />
                       )}
                     </Dropdown.Toggle>
 
@@ -903,7 +898,17 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                       ))}
                     </Dropdown.Menu>
                   </Dropdown>
+                ) : (
+                  <i
+                    className="bi bi-person text-muted"
+                    style={{ fontSize: "1.3rem", lineHeight: 1.3 }}
+                    title="Encargado de la gestión"
+                  />
                 )}
+
+                <span className="small text-muted" title="Encargado de la gestión">
+                  {gestion.encargado_nombre || "Sin asignar"}
+                </span>
               </span>
 
               <Badge

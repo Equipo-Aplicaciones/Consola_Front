@@ -809,6 +809,17 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
           </div>
         ) : (
           <>
+            {/* En modo edición todo el bloque toma un fondo suave para que se note que es editable */}
+            <div
+              className="rounded"
+              style={{
+                background: editando ? "#fff8e1" : "transparent",
+                border: `1px solid ${editando ? "#ffe69c" : "transparent"}`,
+                padding: editando ? "8px 10px 2px" : 0,
+                marginBottom: editando ? 8 : 0,
+                transition: "background-color .2s, border-color .2s"
+              }}
+            >
             {/* CABECERA: nombre, resumen de estados y botón para mostrar/ocultar los detalles */}
             <div className="d-flex align-items-center flex-wrap gap-2 mb-2">
               <div className="d-flex align-items-center flex-wrap gap-2 flex-grow-1" style={{ minWidth: 0 }}>
@@ -1050,7 +1061,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
               <div className="d-flex justify-content-end gap-2 mb-3">
                 <Button
                   size="sm"
-                  variant="secondary"
+                  variant="danger"
                   onClick={cancelarEdicion}
                   disabled={guardandoEdicion}
                 >
@@ -1089,6 +1100,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
               </div>
               </div>
             </Collapse>
+            </div>
 
             {/* GESTIÓN SUSPENDIDA */}
             {gestion.estado_codigo === "SUSPENDIDA" && (

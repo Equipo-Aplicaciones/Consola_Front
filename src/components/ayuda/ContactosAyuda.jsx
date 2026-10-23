@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Col, Form, Modal, Row, Spinner } from "react-bootstrap";
+import { Button, Col, Collapse, Form, Modal, Row, Spinner } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
 import { ROLES } from "./roles";
 
@@ -29,6 +29,14 @@ export default function ContactosAyuda({ token, role }) {
   const [form, setForm] = useState(FORM_VACIO);
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState("");
+  const [abiertos, setAbiertos] = useState({});
+
+  // El detalle (descripción, roles, enlace y botones) está oculto hasta que se hace clic en el contacto
+  const alternarDetalle = (contacto) => {
+    if (!contacto.descripcion && !contacto.link && !esAdmin) return;
+
+    setAbiertos((prev) => ({ ...prev, [contacto.id]: !prev[contacto.id] }));
+  };
 
   const base = `${API_BASE_URL}/docs-ayuda/contactos`;
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
@@ -187,55 +195,74 @@ export default function ContactosAyuda({ token, role }) {
             <div className="col-12 col-md-6 col-xl-4" key={c.id}>
               <div className="card shadow-sm h-100">
                 <div className="card-body d-flex flex-column gap-2" style={{ overflowWrap: "anywhere" }}>
-                  <h6 className="mb-0" title={c.nombre} style={LIMITE_LINEAS(2)}>
-                    <i className="bi bi-person-lines-fill text-primary me-1" />
-                    {c.nombre}
-                  </h6>
+                  <button
+                    type="button"
+                    className="btn p-0 border-0 text-start d-flex align-items-start justify-content-between gap-2 w-100"
+                    style={{ cursor: c.descripcion || c.link || esAdmin ? "pointer" : "default" }}
+                    aria-expanded={Boolean(abiertos[c.id])}
+                    title={c.descripcion || c.link || esAdmin ? "Clic para ver el detalle" : undefined}
+                    onClick={() => alternarDetalle(c)}
+                  >
+                    <span className="h6 mb-0" title={c.nombre} style={LIMITE_LINEAS(2)}>
+                      <i className="bi bi-person-lines-fill text-primary me-1" />
+                      {c.nombre}
+                    </span>
+
+                    {(c.descripcion || c.link || esAdmin) && (
+                      <i
+                        className={`bi bi-chevron-${abiertos[c.id] ? "up" : "down"} text-muted flex-shrink-0`}
+                      />
+                    )}
+                  </button>
 
                   <div className="fw-semibold">
                     <i className="bi bi-telephone me-1" />
                     {c.telefono}
                   </div>
 
-                  {c.descripcion && (
-                    <div className="text-muted small" title={c.descripcion} style={LIMITE_LINEAS(3)}>
-                      {c.descripcion}
+                  <Collapse in={Boolean(abiertos[c.id])}>
+                    <div>
+                      <div className="d-flex flex-column gap-2 pt-1">
+                        {c.descripcion && (
+                          <div className="text-muted small">{c.descripcion}</div>
+                        )}
+
+                        {esAdmin && (
+                          <div className="small text-muted">
+                            <i className="bi bi-people me-1" />
+                            {c.roles_visibles?.length ? c.roles_visibles.join(", ") : "Todos los roles"}
+                          </div>
+                        )}
+
+                        <div className="d-flex gap-1">
+                          {c.link ? (
+                            <a
+                              className="btn btn-sm btn-outline-primary flex-grow-1"
+                              href={c.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <i className="bi bi-box-arrow-up-right me-1" />
+                              Abrir enlace
+                            </a>
+                          ) : (
+                            <span className="flex-grow-1" />
+                          )}
+
+                          {esAdmin && (
+                            <>
+                              <Button size="sm" variant="outline-secondary" title="Editar" onClick={() => abrirFormulario(c)}>
+                                <i className="bi bi-pencil" />
+                              </Button>
+                              <Button size="sm" variant="outline-danger" title="Eliminar" onClick={() => eliminar(c)}>
+                                <i className="bi bi-trash" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  )}
-
-                  {esAdmin && (
-                    <div className="small text-muted">
-                      <i className="bi bi-people me-1" />
-                      {c.roles_visibles?.length ? c.roles_visibles.join(", ") : "Todos los roles"}
-                    </div>
-                  )}
-
-                  <div className="d-flex gap-1 mt-auto">
-                    {c.link ? (
-                      <a
-                        className="btn btn-sm btn-outline-primary flex-grow-1"
-                        href={c.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <i className="bi bi-box-arrow-up-right me-1" />
-                        Abrir enlace
-                      </a>
-                    ) : (
-                      <span className="flex-grow-1" />
-                    )}
-
-                    {esAdmin && (
-                      <>
-                        <Button size="sm" variant="outline-secondary" title="Editar" onClick={() => abrirFormulario(c)}>
-                          <i className="bi bi-pencil" />
-                        </Button>
-                        <Button size="sm" variant="outline-danger" title="Eliminar" onClick={() => eliminar(c)}>
-                          <i className="bi bi-trash" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
+                  </Collapse>
                 </div>
               </div>
             </div>

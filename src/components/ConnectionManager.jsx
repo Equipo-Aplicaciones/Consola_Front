@@ -36,6 +36,8 @@ function ConnectionManager({ token }) {
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
   const isAdmin = user.role === "Admin" || user.role === "N2";
   const isAdminOnly = user.role === "Admin";
+  // Admin, N1 y N2 pueden ejecutar queries guardadas; cada N1/N2 ve solo las que se le asignaron
+  const puedeUsarQuerys = ["Admin", "N1", "N2"].includes(user.role);
 
   const cargarSavedQueries = useCallback(async () => {
     try {
@@ -47,11 +49,23 @@ function ConnectionManager({ token }) {
   }, []);
 
   useEffect(() => {
-    if (isAdminOnly) {
+    if (puedeUsarQuerys) {
       cargarSavedQueries();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdminOnly]);
+  }, [puedeUsarQuerys]);
+
+  // Pestañas disponibles según el rol: "Consultar Vendedor" (Admin y N2) y "Acciones Querys"
+  // (Admin siempre; N1 y N2 solo si tienen alguna query asignada)
+  const tabsDisponibles = [
+    ...(isAdmin ? ["vendedor"] : []),
+    ...(isAdminOnly || savedQueries.length > 0 ? ["querys"] : [])
+  ];
+  const tabActiva = tabsDisponibles.includes(activeSubTab) ? activeSubTab : tabsDisponibles[0];
+
+  // Tipo de acción de una query guardada: viene del servidor para N1/N2 (que no reciben el SQL) y del SQL para Admin
+  const accionDeQuery = (q) =>
+    String(q?.accion || String(q?.sql_text || "").trim().split(/\s+/)[0]).toUpperCase();
 
   const limpiarQuery = () => {
     setSelectedQueryId("");
@@ -70,9 +84,10 @@ function ConnectionManager({ token }) {
   }
 
   const ejecutarQuery = async () => {
-    if (!selectedQueryId || !sqlText.trim()) return;
+    if (!selectedQueryId) return;
 
-    const esSelect = sqlText.trim().toUpperCase().startsWith("SELECT");
+    const esSelect =
+      accionDeQuery(savedQueries.find(sq => String(sq.id) === String(selectedQueryId))) === "SELECT";
     const nombreLocal = selectedConnection
       ? `${selectedConnection.codLocal} — ${selectedConnection.name}`
       : "el local conectado";
@@ -95,7 +110,7 @@ function ConnectionManager({ token }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ connectionId: selected, sql: sqlText })
+        body: JSON.stringify({ connectionId: selected })
       });
       const data = await res.json();
 
@@ -373,18 +388,18 @@ function ConnectionManager({ token }) {
         </div>
       )}
 
-      {isAdmin && selected && String(connectedId) === String(selected) && (
+      {tabsDisponibles.length > 0 && selected && String(connectedId) === String(selected) && (
         <>
           <hr className="my-3" />
 
           {(
             <>
-              {isAdminOnly && (
+              {tabsDisponibles.length > 1 && (
                 <ul className="nav nav-tabs mb-3 connection-subtabs">
                   <li className="nav-item">
                     <button
                       type="button"
-                      className={`nav-link ${activeSubTab === "vendedor" ? "active" : ""}`}
+                      className={`nav-link ${tabActiva === "vendedor" ? "active" : ""}`}
                       onClick={() => setActiveSubTab("vendedor")}
                     >
                       Consultar Vendedor
@@ -393,7 +408,7 @@ function ConnectionManager({ token }) {
                   <li className="nav-item">
                     <button
                       type="button"
-                      className={`nav-link ${activeSubTab === "querys" ? "active" : ""}`}
+                      className={`nav-link ${tabActiva === "querys" ? "active" : ""}`}
                       onClick={() => setActiveSubTab("querys")}
                     >
                       Acciones Querys
@@ -402,7 +417,7 @@ function ConnectionManager({ token }) {
                 </ul>
               )}
 
-              {(activeSubTab === "vendedor" || !isAdminOnly) && (
+              {tabActiva === "vendedor" && (
             <div>
               <div className="row g-3 align-items-center">
                 {selectedConnection && (
@@ -508,7 +523,7 @@ function ConnectionManager({ token }) {
             </div>
               )}
 
-              {isAdminOnly && activeSubTab === "querys" && (
+              {tabActiva === "querys" && (
                 <div>
                   <div className="d-flex align-items-center gap-2 mb-3">
                     <label className="form-label fw-bold mb-0 text-nowrap">Query guardada:</label>
@@ -532,18 +547,20 @@ function ConnectionManager({ token }) {
                         </div>
                       )}
 
-                      <div className="mb-3">
-                        <label className="form-label fw-bold">SQL a ejecutar</label>
-                        <pre className="bg-light border rounded p-2 mb-0" style={{ whiteSpace: "pre-wrap", maxHeight: 150, overflowY: "auto" }}>
-                          {sqlText}
-                        </pre>
-                      </div>
+                      {sqlText && (
+                        <div className="mb-3">
+                          <label className="form-label fw-bold">SQL a ejecutar</label>
+                          <pre className="bg-light border rounded p-2 mb-0" style={{ whiteSpace: "pre-wrap", maxHeight: 150, overflowY: "auto" }}>
+                            {sqlText}
+                          </pre>
+                        </div>
+                      )}
 
                       <button
                         type="button"
                         className="btn btn-primary"
                         onClick={ejecutarQuery}
-                        disabled={ejecutandoQuery || !sqlText.trim()}
+                        disabled={ejecutandoQuery || !selectedQueryId}
                       >
                         {ejecutandoQuery ? "Ejecutando..." : "Ejecutar"}
                       </button>

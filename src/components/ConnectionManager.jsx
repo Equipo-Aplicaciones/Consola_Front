@@ -547,21 +547,12 @@ function ConnectionManager({ token }) {
                         </div>
                       )}
 
-                      {sqlText ? (
+                      {sqlText && (
                         <div className="mb-3">
                           <label className="form-label fw-bold">SQL a ejecutar</label>
                           <pre className="bg-light border rounded p-2 mb-0" style={{ whiteSpace: "pre-wrap", maxHeight: 150, overflowY: "auto" }}>
                             {sqlText}
                           </pre>
-                        </div>
-                      ) : (
-                        <div className="small text-muted mb-3">
-                          Tipo de acción:{" "}
-                          <strong>
-                            {accionDeQuery(savedQueries.find(sq => String(sq.id) === String(selectedQueryId))) === "SELECT"
-                              ? "consulta (solo lectura)"
-                              : "modifica datos del local"}
-                          </strong>
                         </div>
                       )}
 

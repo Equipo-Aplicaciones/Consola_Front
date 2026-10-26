@@ -8,7 +8,8 @@ export default function SavedQueryModal({ show, onClose, refresh, query, token }
     nombre: "",
     descripcion: "",
     sql_text: "",
-    activo: true
+    activo: true,
+    roles_ejecutan: []
   });
 
   useEffect(() => {
@@ -18,9 +19,19 @@ export default function SavedQueryModal({ show, onClose, refresh, query, token }
       nombre: query?.nombre ?? "",
       descripcion: query?.descripcion ?? "",
       sql_text: query?.sql_text ?? "",
-      activo: query?.activo ?? true
+      activo: query?.activo ?? true,
+      roles_ejecutan: query?.roles_ejecutan ?? []
     });
   }, [show, query]);
+
+  function alternarRol(rol) {
+    setForm(prev => ({
+      ...prev,
+      roles_ejecutan: prev.roles_ejecutan.includes(rol)
+        ? prev.roles_ejecutan.filter(r => r !== rol)
+        : [...prev.roles_ejecutan, rol]
+    }));
+  }
 
   function onChange(e) {
     const { name, value, checked, type } = e.target;
@@ -115,6 +126,25 @@ export default function SavedQueryModal({ show, onClose, refresh, query, token }
           onChange={onChange}
           title="Solo las queries activas aparecen para ejecutar desde Gestión de Conexiones"
         />
+
+        <Form.Group className="mt-3">
+          <Form.Label className="mb-1 fw-semibold">Quién puede ejecutarla</Form.Label>
+          <div className="d-flex flex-wrap gap-3">
+            {["N1", "N2"].map(rol => (
+              <Form.Check
+                key={rol}
+                type="checkbox"
+                id={`rol-ejecuta-${rol}`}
+                label={rol}
+                checked={form.roles_ejecutan.includes(rol)}
+                onChange={() => alternarRol(rol)}
+              />
+            ))}
+          </div>
+          <Form.Text className="text-muted">
+            Aparece en el Panel de Gestión de quienes marques. Admin siempre puede ejecutarla; sin selección, solo Admin.
+          </Form.Text>
+        </Form.Group>
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={onClose}>

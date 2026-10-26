@@ -75,7 +75,8 @@ function SavedQueries({ token }) {
               <thead className="sticky-top bg-white shadow-sm">
                 <tr className="table-secondary">
                   <th style={{ width: "20%" }}>Nombre</th>
-                  <th style={{ width: "50%" }}>Descripción</th>
+                  <th style={{ width: "42%" }}>Descripción</th>
+                  <th className="text-nowrap">Ejecutan</th>
                   <th className="text-center">Estado</th>
                   <th className="text-center">Acciones</th>
                 </tr>
@@ -86,6 +87,9 @@ function SavedQueries({ token }) {
                     <td className="text-nowrap fw-semibold">{query.nombre}</td>
                     <td className="text-muted" style={{ whiteSpace: "pre-wrap" }}>
                       {query.descripcion || <span className="fst-italic">Sin descripción</span>}
+                    </td>
+                    <td className="text-nowrap small">
+                      Admin{query.roles_ejecutan?.length ? `, ${query.roles_ejecutan.join(", ")}` : ""}
                     </td>
                     <td className="text-center">
                       {query.activo ? (

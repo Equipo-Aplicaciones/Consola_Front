@@ -23,7 +23,7 @@ function AdminDashboard({ token, role }) {
 
   // roles: si no se declara, el tab es visible para cualquiera con acceso
   // al Panel de Administración (Admin, N2). N2 no ve Ventas/Agotados/
-  // Reportes/Logs/Usuarios.
+  // Reportes/Logs/Usuarios/Tareas/Consultas SQL.
   const gruposBase = [
     {
       key: "operacion",
@@ -51,7 +51,7 @@ function AdminDashboard({ token, role }) {
       icon: "bi bi-gear",
       tabs: [
         { key: "users", label: "Usuarios", icon: "bi bi-people", roles: ["Admin"] },
-        { key: "scheduled-tasks", label: "Tareas", icon: "bi bi-list-check" },
+        { key: "scheduled-tasks", label: "Tareas", icon: "bi bi-list-check", roles: ["Admin"] },
         { key: "gestiones", label: "Gestiones", icon: "bi bi-sliders" },
         { key: "connections", label: "Locales", icon: "bi bi-shop" },
         { key: "saved-queries", label: "Consultas SQL", icon: "bi bi-database-gear", roles: ["Admin"] }

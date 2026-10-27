@@ -62,6 +62,7 @@ function VentasDistribuidasView({token}) {
                 const localTotal = l.local?.total ?? 0;
                 const centralTotal = l.central?.total ?? 0;
                 const diferenciaTotal = l.diferencia?.total ?? 0;
+                const sinConexion = l.estado === "SIN_CONEXION";
 
                 return (
                   <tr key={l.codLocal}>
@@ -80,7 +81,7 @@ function VentasDistribuidasView({token}) {
 
                     {/* LOCAL */}
                     <td className="text-end">
-                      ${localTotal.toLocaleString("es-CL")}
+                      {sinConexion ? "—" : `${localTotal.toLocaleString("es-CL")}`}
                     </td>
 
                     {/* CENTRAL SOLO DESKTOP */}
@@ -90,12 +91,16 @@ function VentasDistribuidasView({token}) {
 
                     {/* DIFERENCIA */}
                     <td className="text-end fw-bold">
-                      ${diferenciaTotal.toLocaleString("es-CL")}
+                      {sinConexion ? "—" : `${diferenciaTotal.toLocaleString("es-CL")}`}
                     </td>
 
                     {/* ESTADO */}
                     <td>
-                      {diferenciaTotal === 0 ? (
+                      {sinConexion ? (
+                        <span className="badge bg-warning text-dark" title={l.error || "No se pudo consultar el local"}>
+                          Sin conexión
+                        </span>
+                      ) : diferenciaTotal === 0 ? (
                         <span className="badge bg-success">
                           OK
                         </span>

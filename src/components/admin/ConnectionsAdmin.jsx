@@ -9,6 +9,9 @@ import * as XLSX from "xlsx";
 import { logout } from "../utils/logout";
 
 function ConnectionsAdmin({ token }) {
+  // Solo el Admin puede eliminar locales (el servidor también lo exige)
+  const esAdmin = JSON.parse(localStorage.getItem("authUser") || "{}").role === "Admin";
+
   const emptyForm = {
     id: null,
     name: "",
@@ -741,10 +744,12 @@ function ConnectionsAdmin({ token }) {
                             onClick={() => toggleActivo(row.id, !row.activo)}>
                                 {row.activo ? "⏻" : "⏻"}
                             </button>
-                            <button className="btn btn-sm btn-danger" title="Eliminar local"
-                                onClick={() => eliminar(row.id)} >
-                                🗑️
-                            </button>
+                            {esAdmin && (
+                              <button className="btn btn-sm btn-danger" title="Eliminar local"
+                                  onClick={() => eliminar(row.id)} >
+                                  🗑️
+                              </button>
+                            )}
                         </div>
                         <MobileActions
                             actions={[
@@ -774,11 +779,15 @@ function ConnectionsAdmin({ token }) {
                                 icon: row.activo ? "bi bi-toggle-on text-success" : "bi bi-toggle-off text-secondary",
                                 onClick: () => toggleActivo(row.id, !row.activo),
                                 },
-                                {
-                                label: "Eliminar",
-                                icon: "bi bi-trash text-danger",
-                                onClick: () => eliminar(row.id),
-                                },
+                                ...(esAdmin
+                                  ? [
+                                      {
+                                        label: "Eliminar",
+                                        icon: "bi bi-trash text-danger",
+                                        onClick: () => eliminar(row.id),
+                                      },
+                                    ]
+                                  : []),
                             ]}
                         />
                     </div>

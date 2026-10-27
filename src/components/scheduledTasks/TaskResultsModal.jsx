@@ -5,9 +5,11 @@ import { API_BASE_URL } from "../../config";
 export default function TaskResultsModal({ show,onClose,task,token }) {
   const [loading, setLoading] = useState(false);
   const [resultados, setResultados] = useState([]);
+  const [soloErrores, setSoloErrores] = useState(false);
 
   useEffect(() => {
     if (!show || !task) return;
+    setSoloErrores(false);
     cargarResultados();
   }, [show, task]);
 
@@ -40,6 +42,9 @@ export default function TaskResultsModal({ show,onClose,task,token }) {
 
   const ok = resultados.filter(r => r.estado === "OK").length;
   const error = resultados.filter(r => r.estado !== "OK").length;
+  const visibles = soloErrores
+    ? resultados.filter(r => r.estado !== "OK")
+    : resultados;
 
   return (
 
@@ -64,7 +69,31 @@ export default function TaskResultsModal({ show,onClose,task,token }) {
         <div className="mb-3">
 
           <Badge bg="success" className="me-2"> OK: {ok} </Badge>
-          <Badge bg="danger"> Error: {error} </Badge>
+          <Badge
+            as="button"
+            type="button"
+            bg="danger"
+            disabled={error === 0}
+            title={
+              soloErrores
+                ? "Clic para volver a mostrar todos los locales"
+                : "Clic para ver solo los locales con error"
+            }
+            onClick={() => setSoloErrores(v => !v)}
+            style={{
+              border: 0,
+              cursor: error === 0 ? "default" : "pointer",
+              boxShadow: soloErrores ? "0 0 0 3px rgba(220, 53, 69, 0.35)" : "none"
+            }}
+          >
+            Error: {error}
+          </Badge>
+
+          {soloErrores && (
+            <span className="ms-2 small text-muted">
+              Mostrando solo los locales con error. Haz clic en Error para ver todos.
+            </span>
+          )}
 
         </div>
 
@@ -87,7 +116,7 @@ export default function TaskResultsModal({ show,onClose,task,token }) {
                 </tr>
               </thead>
               <tbody>
-                {resultados.map((r, index) => (                
+                {visibles.map((r, index) => (
                   <tr key={index}>
                     <td>{r.codLocal}</td>
                     <td>{r.nombre}</td>

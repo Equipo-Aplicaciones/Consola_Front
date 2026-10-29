@@ -8,6 +8,8 @@ export default function EditarProductoModal({
   imagenNueva,
   nota,
   nombresImagen,
+  grupos = [],
+  onRenombrarOpcion,
   onGuardar,
   onCerrar,
   onImagen,
@@ -18,6 +20,12 @@ export default function EditarProductoModal({
   const [categoria, setCategoria] = useState(producto.catId);
   const [orden, setOrden] = useState(producto.order ?? "");
   const inputImagen = useRef(null);
+  const [opcion, setOpcion] = useState(null);
+
+  const guardarOpcion = () => {
+    if (!opcion.nuevo.trim() || opcion.nuevo.trim() === opcion.nombre) return;
+    if (onRenombrarOpcion(opcion.id, opcion.nuevo, opcion.nombre)) setOpcion(null);
+  };
 
   const guardar = () => onGuardar({ desc, precio, categoria, orden });
 
@@ -118,6 +126,80 @@ export default function EditarProductoModal({
         </div>
 
         {nota && <div className="small text-warning-emphasis mt-2">{nota}</div>}
+
+        {grupos.length > 0 && (
+          <div className="mt-3">
+            <div className="small fw-semibold mb-1">Opcionales</div>
+            <div className="small text-muted mb-2">
+              Solo se puede cambiar el nombre visible de cada opción; el nombre del grupo, los precios y las
+              asociaciones no se modifican. El cambio aplica en todos los productos que usan la misma opción.
+            </div>
+
+            {grupos.map((g) => (
+              <div className="em-opc-grupo" key={g.id}>
+                <div className="em-opc-cab">
+                  <span className="fw-semibold text-break">{g.name}</span>
+                  <span className="badge text-bg-light border">Solo lectura</span>
+                </div>
+
+                {g.options.map((o) =>
+                  opcion?.id === o.id && opcion?.grupo === g.id ? (
+                    <div className="em-opc-edicion" key={o.id}>
+                      <div className="small text-muted">
+                        Nombre actual: <b>{opcion.nombre}</b>
+                      </div>
+                      <Form.Group className="mt-1">
+                        <Form.Label className="small mb-0">Nuevo nombre</Form.Label>
+                        <Form.Control
+                          size="sm"
+                          autoFocus
+                          value={opcion.nuevo}
+                          onChange={(e) => setOpcion({ ...opcion, nuevo: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") guardarOpcion();
+                            if (e.key === "Escape") {
+                              e.stopPropagation();
+                              setOpcion(null);
+                            }
+                          }}
+                        />
+                      </Form.Group>
+                      {o.tambienProducto && (
+                        <div className="small text-warning-emphasis mt-1">
+                          Esta opción también figura como producto del menú: se renombrará allí también.
+                        </div>
+                      )}
+                      <div className="d-flex gap-2 justify-content-end mt-2">
+                        <Button size="sm" variant="outline-secondary" onClick={() => setOpcion(null)}>
+                          Cancelar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          disabled={!opcion.nuevo.trim() || opcion.nuevo.trim() === opcion.nombre}
+                          onClick={guardarOpcion}
+                        >
+                          Guardar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="em-opc-fila" key={o.id}>
+                      <span className="text-break">{o.name}</span>
+                      <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={() => setOpcion({ id: o.id, grupo: g.id, nombre: o.name, nuevo: o.name })}
+                      >
+                        Editar
+                      </Button>
+                    </div>
+                  )
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </Modal.Body>
 
       <Modal.Footer>

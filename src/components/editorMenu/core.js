@@ -56,6 +56,13 @@ function setImageUrl(o, url) {
 }
 function writeNumberLike(obj, key, n) { obj[key] = typeof obj[key] === 'string' ? String(n) : n; }
 
+// Nombre nuevo de una opción: sin espacios en los extremos y nunca vacío.
+function nombreOpcionValido(text) {
+  const t = String(text ?? '').trim();
+  if (!t) throw Error('El nuevo nombre de la opción no puede estar vacío.');
+  return t;
+}
+
 // ---------------- PedidosYa ----------------
 const DIAS_PEYA = [
   ['MONDAY', 'SCH-LUNES', 'Lunes'],
@@ -131,6 +138,36 @@ const PEYA = {
     dst.products[key] = ref;
   },
   canSetCategoryOrder: (j, catId) => !!PEYA._menu(j).products?.[catId],
+  // Opcionales: producto.toppings → grupo (Topping) → products → ítem de la opción.
+  // Solo se renombra catalog.items[ID_OPCION].title.default; el grupo, el id y todo lo demás quedan intactos.
+  _comoProducto(j) {
+    const ids = new Set();
+    for (const x of Object.values(this._items(j))) {
+      if (x && x.type === 'Category') for (const [id, r] of Object.entries(x.products || {})) if (r.type === 'Product') ids.add(id);
+    }
+    return ids;
+  },
+  optionGroups(j, catId, key) {
+    const items = this._items(j), it = items[key], comoProducto = this._comoProducto(j);
+    return Object.keys(it?.toppings || {}).filter(g => items[g]).map(g => ({
+      id: g,
+      name: readText(items[g].title).trim() || g,
+      options: Object.keys(items[g].products || {}).filter(o => items[o]).map(o => ({ id: o, name: readText(items[o].title).trim() || o, tambienProducto: comoProducto.has(o) }))
+    }));
+  },
+  optionNames(j) {
+    const items = this._items(j), m = new Map();
+    for (const g of Object.values(items)) {
+      if (!g || g.type !== 'Topping') continue;
+      for (const o of Object.keys(g.products || {})) if (items[o]) m.set(o, readText(items[o].title).trim());
+    }
+    return m;
+  },
+  setOptionName(j, optId, text) {
+    const nombre = nombreOpcionValido(text), it = this._items(j)[optId];
+    if (!it) throw Error('La opción no existe en el catálogo: ' + optId);
+    writeText(it, 'title', nombre, t => ({ default: t }));
+  },
   setCategoryOrder(j, catId, n) { this._menu(j).products[catId].order = n; },
   // Horarios (ScheduleEntry): la categoría solo se muestra en los días del horario que referencia.
   // Los días elegidos se agrupan en UNA entrada (se reutiliza una existente con los mismos días o se crea,
@@ -262,6 +299,30 @@ const RAPPI = {
     it.sortingPosition = max + 1;
   },
   canSetCategoryOrder: () => true,
+  // Opcionales: items[].children[]. El nombre visible es children[].name y la opción se identifica por su sku;
+  // children[].category es el grupo (no se toca). Una misma opción puede repetirse en varios productos.
+  optionGroups(j, catId, key) {
+    const grupos = new Map();
+    for (const c of j.items[Number(key)]?.children || []) {
+      if (c.sku == null) continue;
+      const gid = c.category?.id ?? '';
+      if (!grupos.has(gid)) grupos.set(gid, { id: String(gid), name: (c.category?.name || '').trim() || 'Opciones', options: [] });
+      const g = grupos.get(gid), id = String(c.sku);
+      if (!g.options.some(o => o.id === id)) g.options.push({ id, name: readText(c.name).trim() || id, tambienProducto: false });
+    }
+    return [...grupos.values()];
+  },
+  optionNames(j) {
+    const m = new Map();
+    for (const it of j.items) for (const c of it.children || []) if (c.sku != null && !m.has(String(c.sku))) m.set(String(c.sku), readText(c.name).trim());
+    return m;
+  },
+  setOptionName(j, sku, text) {
+    const nombre = nombreOpcionValido(text);
+    let n = 0;
+    for (const it of j.items) for (const c of it.children || []) if (c.sku != null && String(c.sku) === String(sku)) { writeText(c, 'name', nombre, t => t); n++; }
+    if (!n) throw Error('No se encontró la opción con SKU ' + sku);
+  },
   setCategoryOrder(j, catId, n) {
     for (const it of j.items) if (it.category && it.category.id === catId) it.category.sortingPosition = n;
     if (j.__rappiCatCache && j.__rappiCatCache[catId]) j.__rappiCatCache[catId].sortingPosition = n;
@@ -304,6 +365,29 @@ const UBER = {
     (dst.entities = dst.entities || []).push(ent);
   },
   canSetCategoryOrder: (j, catId) => (j.menus[0].category_ids || []).includes(catId),
+  // Opcionales: item.modifier_group_ids → modifier_groups[] → modifier_options[].id → items[].id.
+  // El nombre de la opción es items[].title.translations.en; el título del grupo no se toca.
+  _nombreOpcion: it => (it.title?.translations?.en ?? readText(it.title)).trim(),
+  optionGroups(j, catId, key) {
+    const ref = this._item(j, key)?.modifier_group_ids, ids = Array.isArray(ref) ? ref : (ref?.ids || []);
+    const comoProducto = new Set(j.categories.flatMap(c => (c.entities || []).map(e => e.id)));
+    return ids.map(id => (j.modifier_groups || []).find(g => g.id === id)).filter(Boolean).map(g => ({
+      id: g.id,
+      name: readText(g.title).trim() || g.id,
+      options: (g.modifier_options || []).map(o => ({ o, it: this._item(j, o.id) })).filter(x => x.it).map(({ o, it }) => ({ id: o.id, name: this._nombreOpcion(it) || o.id, tambienProducto: comoProducto.has(o.id) }))
+    }));
+  },
+  optionNames(j) {
+    const m = new Map();
+    for (const g of j.modifier_groups || []) for (const o of g.modifier_options || []) { const it = this._item(j, o.id); if (it) m.set(o.id, this._nombreOpcion(it)); }
+    return m;
+  },
+  setOptionName(j, optId, text) {
+    const nombre = nombreOpcionValido(text), it = this._item(j, optId);
+    if (!it) throw Error('La opción no existe en items: ' + optId);
+    if (it.title?.translations && typeof it.title.translations === 'object') it.title.translations.en = nombre;
+    else writeText(it, 'title', nombre, t => ({ translations: { en: t } }));
+  },
   setCategoryOrder(j, catId, n) { const ids = this._menu(j).category_ids, i = ids.indexOf(catId); if (i >= 0) this._mv(ids, i, n - 1); }
 };
 
@@ -344,6 +428,13 @@ function diffDetalle(adapter, original, current) {
     if (o.image !== v.image) out.push({ ...base, tipo: 'imagen', antes: o.image, despues: v.image, texto: `Imagen: ${v.name} — ${ultimoSegmento(o.image) || '(sin imagen)'} → ${ultimoSegmento(v.image) || '(sin imagen)'}` });
     if (o.desc !== v.desc) out.push({ ...base, tipo: 'descripcion', antes: o.desc, despues: v.desc, texto: `Descripción: ${v.name} — "${o.desc}" → "${v.desc}"` });
   }
+  if (adapter.optionNames) {
+    const oa = adapter.optionNames(original);
+    for (const [id, despues] of adapter.optionNames(current)) {
+      const antes = oa.get(id);
+      if (antes !== undefined && antes !== despues) out.push({ tipo: 'opcion', opcionId: id, nombre: antes, antes, despues, texto: `Opción: ${antes} → ${despues}` });
+    }
+  }
   const ca = adapter.categories(original), cb = adapter.categories(current);
   if (adapter.positional) {
     for (const c of cb) {
@@ -364,6 +455,25 @@ function diffDetalle(adapter, original, current) {
   }
   return out;
 }
+// Antes de exportar: renombrar opciones no debe haber tocado nada más. Compara la estructura de opcionales
+// (grupos, sus nombres y los ids de sus opciones) entre el original y el estado actual y exige nombres no vacíos.
+function verificarOpciones(adapter, original, current) {
+  if (!adapter.optionGroups) return [];
+  const problemas = [];
+  const estructura = j => {
+    const m = new Map();
+    for (const p of allProducts(adapter, j)) {
+      const k = p.catId + '|' + p.key;
+      m.set(k, JSON.stringify(adapter.optionGroups(j, p.catId, p.key).map(g => [g.id, g.name, g.options.map(o => o.id)])));
+    }
+    return m;
+  };
+  const antes = estructura(original), ahora = estructura(current);
+  for (const [k, v] of ahora) if (antes.has(k) && antes.get(k) !== v) problemas.push('Cambió la estructura de opcionales (grupos u opciones) del producto ' + k.split('|')[1]);
+  for (const [id, nombre] of adapter.optionNames(current)) if (!nombre) problemas.push('La opción ' + id + ' quedó sin nombre');
+  return problemas;
+}
+
 const diff = (adapter, original, current) => diffDetalle(adapter, original, current).map(x => x.texto);
 
 // ---------- Imágenes: identificación por nombre de archivo ----------
@@ -489,4 +599,4 @@ function aplicarImagenes(adapter, data, uids, fecha) {
 
 const safeFile = s => String(s).replace(/[\\/:*?"<>|]+/g, '_');
 
-export { PEYA, RAPPI, UBER, detectAdapter, allProducts, serialize, detectIndent, detectFloatKeys, diff, diffDetalle, matchImage, makeZip, crc32, normName, safeFile, nombreBase, marcaTiempo, ultimoSegmento, idDeImagen, urlConNombre, marcaFecha, aplicarImagenes };
+export { PEYA, RAPPI, UBER, verificarOpciones, detectAdapter, allProducts, serialize, detectIndent, detectFloatKeys, diff, diffDetalle, matchImage, makeZip, crc32, normName, safeFile, nombreBase, marcaTiempo, ultimoSegmento, idDeImagen, urlConNombre, marcaFecha, aplicarImagenes };

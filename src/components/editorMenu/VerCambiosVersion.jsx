@@ -105,6 +105,7 @@ export default function VerCambiosVersion({ version, token, fecha, onCerrar }) {
 
   const categoria = resumenCategorias.find((c) => c.id === seleccionada);
   const ordenCategorias = cambios.find((x) => x.tipo === "orden_categorias");
+  const opciones = cambios.filter((x) => x.tipo === "opcion");
 
   const productosVisibles = categoria
     ? categoria.productos.filter((p) => !soloModificados || porProducto.has(p.uid))
@@ -225,6 +226,20 @@ export default function VerCambiosVersion({ version, token, fecha, onCerrar }) {
               <div className="alert alert-info py-2 small">
                 <b>Orden de categorías:</b> antes {ordenCategorias.antes.join(" · ")} → ahora{" "}
                 {ordenCategorias.despues.join(" · ")}
+              </div>
+            )}
+
+            {opciones.length > 0 && (
+              <div className="alert alert-info py-2 small">
+                <b>Opciones renombradas ({opciones.length}):</b>
+                <ul className="mb-0">
+                  {opciones.map((o) => (
+                    <li key={o.opcionId} className="text-break">
+                      <span className="em-antes d-inline">{o.antes}</span> → <span className="em-ahora d-inline">{o.despues}</span>{" "}
+                      <span className="em-pid">{o.opcionId}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 

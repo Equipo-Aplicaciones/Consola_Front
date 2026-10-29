@@ -16,7 +16,8 @@ import {
   matchImage,
   nombreBase,
   safeFile,
-  serialize
+  serialize,
+  verificarOpciones
 } from "./core";
 import { IMG_H, IMG_W, descargar, procesarImagen } from "./imagenes";
 import Miniatura from "./Miniatura";
@@ -28,7 +29,7 @@ import "./editorMenu.css";
 
 const MAX_HISTORIAL = 80;
 const MENSAJE_INICIAL =
-  "Carga un JSON de PedidosYa, Rappi o Uber Eats. Solo se puede editar descripción, precio, categoría, orden e imagen (y, en PedidosYa, el horario de cada categoría).";
+  "Carga un JSON de PedidosYa, Rappi o Uber Eats. Solo se puede editar descripción, precio, categoría, orden e imagen, el nombre de las opciones de cada producto (no el de sus grupos) y, en PedidosYa, el horario de cada categoría.";
 
 const dinero = (n) => "$" + Number(n || 0).toLocaleString("es-CL");
 const normalizar = (s) =>
@@ -324,6 +325,24 @@ export default function EditorMenu({ token }) {
     refrescar();
   };
 
+  // El renombrado se aplica al instante (con deshacer): solo cambia el nombre visible de la opción.
+  const renombrarOpcion = (optId, nombre, antes) => {
+    snap();
+
+    try {
+      adapter.setOptionName(data, optId, nombre);
+      avisar("ok", <>Opción renombrada: <b>{antes}</b> → <b>{nombre.trim()}</b>.</>);
+    } catch (err) {
+      store.current.data = JSON.parse(history.pop());
+      avisar("warn", err.message);
+      refrescar();
+      return false;
+    }
+
+    refrescar();
+    return true;
+  };
+
   const guardarHorarios = (nueva) => {
     const { seleccion } = adapter.scheduleChoices(data, seleccionada);
     const igual = (a, b) => a.slice().sort().join() === b.slice().sort().join();
@@ -401,6 +420,13 @@ export default function EditorMenu({ token }) {
     s.marca = marcaTiempo(ahora);
     s.fileName = `${s.baseName}-editado-${s.marca}.json`;
     s.plan = aplicarImagenes(adapter, data, [...imgs.keys()], marcaFecha(ahora));
+
+    const problemas = verificarOpciones(adapter, original, s.plan.clon);
+    if (problemas.length) {
+      avisar("warn", "No se puede exportar: " + problemas.join("; ") + ".");
+      return;
+    }
+
     s.contenido = serialize(s.plan.clon, s.indent, s.floatKeys);
     s.detalle = diffDetalle(adapter, original, s.plan.clon);
     setErrorVersion("");
@@ -964,6 +990,8 @@ export default function EditorMenu({ token }) {
           imagenNueva={imagenDeEdicion}
           nota={notaEdicion}
           nombresImagen={nombresDeImagen(editando)}
+          grupos={adapter.optionGroups ? adapter.optionGroups(data, editando.catId, editando.key) : []}
+          onRenombrarOpcion={renombrarOpcion}
           onGuardar={guardarProducto}
           onCerrar={() => setEditando(null)}
           onImagen={imagenDesdeModal}

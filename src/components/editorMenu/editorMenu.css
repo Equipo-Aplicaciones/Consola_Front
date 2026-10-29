@@ -357,3 +357,35 @@
     max-height: 180px;
   }
 }
+
+/* Opcionales del producto (solo se edita el nombre de cada opción) */
+.editor-menu .em-opc-grupo {
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.editor-menu .em-opc-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bs-tertiary-bg, #f1f3f5);
+  font-size: 0.9rem;
+}
+.editor-menu .em-opc-fila,
+.editor-menu .em-opc-edicion {
+  padding: 5px 10px;
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  font-size: 0.9rem;
+}
+.editor-menu .em-opc-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.editor-menu .em-opc-edicion {
+  background: var(--bs-warning-bg-subtle, #fff8e1);
+}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, Button, Form, Row, Col } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
+import { PERFILES_GESTION } from "./perfiles";
 
 export default function GestionModal({
   show,
@@ -14,15 +15,13 @@ export default function GestionModal({
     descripcion: "",
     version: "",
     fecha_inicio: "",
-    encargado_id: ""
+    perfil: ""
   });
   const [locales, setLocales] = useState([]);
-  const [encargados, setEncargados] = useState([]);
   const [seleccionados, setSeleccionados] = useState([]);
   const [empresaFiltro, setEmpresaFiltro] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
-  const [loadingEncargados, setLoadingEncargados] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [showSearch, setShowSearch] = useState(false);
@@ -119,57 +118,6 @@ export default function GestionModal({
   }, [token]);
 
   /* =====================================================
-     ENCARGADOS (N1, N2, Admin)
-  ===================================================== */
-
-  const cargarEncargados = useCallback(async () => {
-    if (!token) return;
-
-    try {
-      setLoadingEncargados(true);
-
-      const res = await fetch(
-        `${API_BASE_URL}/gestiones/usuarios/encargados`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      if (res.status === 401) {
-        localStorage.clear();
-        window.location.replace("/login");
-        return;
-      }
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(
-          data.error ||
-          "Error cargando encargados"
-        );
-      }
-
-      setEncargados(
-        Array.isArray(data)
-          ? data
-          : data.data || []
-      );
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        err.message ||
-        "Error cargando encargados"
-      );
-    } finally {
-      setLoadingEncargados(false);
-    }
-  }, [token]);
-
-  /* =====================================================
      ABRIR MODAL
   ===================================================== */
 
@@ -181,7 +129,7 @@ export default function GestionModal({
       descripcion: "",
       version: "",
       fecha_inicio: obtenerHoy(),
-      encargado_id: ""
+      perfil: ""
     });
 
     setSeleccionados([]);
@@ -191,11 +139,9 @@ export default function GestionModal({
     setError("");
 
     cargarLocales();
-    cargarEncargados();
   }, [
     show,
-    cargarLocales,
-    cargarEncargados
+    cargarLocales
   ]);
 
   /* =====================================================
@@ -361,9 +307,9 @@ export default function GestionModal({
       return;
     }
 
-    if (!form.encargado_id) {
+    if (!form.perfil) {
       setError(
-        "Debe seleccionar un encargado para la gestión."
+        "Debe seleccionar el perfil al que se asigna la gestión."
       );
       return;
     }
@@ -429,12 +375,12 @@ export default function GestionModal({
       }
 
       /* =================================================
-         2. ASIGNAR ENCARGADO
+         2. ASIGNAR PERFIL
       ================================================= */
 
-      const resEncargado =
+      const resPerfil =
         await fetch(
-          `${API_BASE_URL}/gestiones/${data.id}/encargado`,
+          `${API_BASE_URL}/gestiones/${data.id}/perfil`,
           {
             method: "PUT",
             headers: {
@@ -444,21 +390,18 @@ export default function GestionModal({
                 "application/json"
             },
             body: JSON.stringify({
-              encargado_id:
-                Number(
-                  form.encargado_id
-                )
+              perfil: form.perfil
             })
           }
         );
 
-      const dataEncargado =
-        await resEncargado.json();
+      const dataPerfil =
+        await resPerfil.json();
 
-      if (!resEncargado.ok) {
+      if (!resPerfil.ok) {
         throw new Error(
-          dataEncargado.error ||
-          "La gestión fue creada, pero no se pudo asignar el encargado."
+          dataPerfil.error ||
+          "La gestión fue creada, pero no se pudo asignar el perfil."
         );
       }
 
@@ -610,7 +553,7 @@ export default function GestionModal({
             </Col>
 
             {/* =============================================
-                ENCARGADO
+                PERFIL ASIGNADO
             ============================================= */}
 
             <Col md={8}>
@@ -620,39 +563,33 @@ export default function GestionModal({
                   className="mb-0 text-nowrap"
                   style={{ minWidth: 95 }}
                 >
-                  Encargado
+                  Asignar a
                 </Form.Label>
 
                 <Form.Select
                   value={
-                    form.encargado_id
-                  }
-                  disabled={
-                    loadingEncargados
+                    form.perfil
                   }
                   onChange={e =>
                     setForm({
                       ...form,
-                      encargado_id:
+                      perfil:
                         e.target.value
                     })
                   }
                   required
                 >
                   <option value="">
-                    {loadingEncargados
-                      ? "Cargando usuarios..."
-                      : "Seleccione encargado"
-                    }
+                    Seleccione perfil
                   </option>
 
-                  {encargados.map(
-                    usuario => (
+                  {PERFILES_GESTION.map(
+                    perfil => (
                       <option
-                        key={usuario.id}
-                        value={usuario.id}
+                        key={perfil}
+                        value={perfil}
                       >
-                        {usuario.full_name} ({usuario.role})
+                        {perfil}
                       </option>
                     )
                   )}
@@ -931,10 +868,7 @@ export default function GestionModal({
           <Button
             type="submit"
             variant="primary"
-            disabled={
-              guardando ||
-              loadingEncargados
-            }
+            disabled={guardando}
           >
             {guardando ? (
               <>

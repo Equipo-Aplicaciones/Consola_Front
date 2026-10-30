@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import { API_BASE_URL } from "../../config";
 import FiltroEstados from "./FiltroEstados";
 import GestionInstructivos from "./GestionInstructivos";
+import { PERFILES_GESTION } from "./perfiles";
 
 export default function GestionDetalleModal({ show, onClose, gestionId, token, refresh }) {
   const [gestion, setGestion] = useState(null);
@@ -29,9 +30,8 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   });
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [errorEdicion, setErrorEdicion] = useState("");
-  const [encargados, setEncargados] = useState([]);
-  const [guardandoEncargado, setGuardandoEncargado] = useState(false);
-  const [errorEncargado, setErrorEncargado] = useState("");
+  const [guardandoPerfil, setGuardandoPerfil] = useState(false);
+  const [errorPerfil, setErrorPerfil] = useState("");
   const [detallesAbiertos, setDetallesAbiertos] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
@@ -107,7 +107,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
     setComentarioMasivo("");
     setEditando(false);
     setErrorEdicion("");
-    setErrorEncargado("");
+    setErrorPerfil("");
     setDetallesAbiertos(false);
     cargarEstados();
     cargarGestion();
@@ -693,41 +693,23 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
     gestion?.estado_codigo === "FINALIZADA" ||
     gestion?.estado_codigo === "CANCELADA";
 
-  const cargarEncargados = async () => {
-    if (encargados.length) return;
-
-    setErrorEncargado("");
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/gestiones/usuarios/encargados`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error || "Error cargando encargados");
-
-      setEncargados(Array.isArray(data) ? data : []);
-    } catch (err) {
-      setErrorEncargado(err.message || "Error cargando encargados");
-    }
-  };
-
-  // Se elige a alguien en el menú de "Reasignar": se pide confirmación y se guarda de inmediato.
-  const reasignarA = async (usuario) => {
-    if (Number(usuario.id) === Number(gestion.encargado_id)) {
+  // Se elige un perfil en el menú de "Reasignar": se pide confirmación y se guarda de inmediato.
+  const reasignarA = async (perfil) => {
+    if (perfil === gestion.perfil_asignado) {
       return;
     }
 
-    // Un N2 solo ve las gestiones que creó o que tiene asignadas: si la reasigna, la deja de ver.
+    // Un N2 solo ve las gestiones que creó o que están asignadas al perfil N2: si la reasigna a
+    // otro perfil, la deja de ver.
     const perderaAcceso =
       role === "N2" &&
       Number(gestion.creado_por) !== Number(user.id) &&
-      Number(usuario.id) !== Number(user.id);
+      perfil !== "N2";
 
-    const anterior = gestion.encargado_nombre || "sin encargado";
+    const anterior = gestion.perfil_asignado ? `perfil ${gestion.perfil_asignado}` : "sin asignar";
 
     const mensaje =
-      `¿Reasignar la gestión "${gestion.nombre}" de ${anterior} a ${usuario.full_name}?` +
+      `¿Reasignar la gestión "${gestion.nombre}" de ${anterior} a perfil ${perfil}?` +
       (perderaAcceso
         ? "\n\nEsta gestión no la creaste tú: al reasignarla dejarás de verla."
         : "");
@@ -736,17 +718,17 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
       return;
     }
 
-    setGuardandoEncargado(true);
-    setErrorEncargado("");
+    setGuardandoPerfil(true);
+    setErrorPerfil("");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/gestiones/${gestion.id}/encargado`, {
+      const res = await fetch(`${API_BASE_URL}/gestiones/${gestion.id}/perfil`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ encargado_id: Number(usuario.id) })
+        body: JSON.stringify({ perfil })
       });
       const data = await res.json();
 
@@ -760,15 +742,14 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
 
       setGestion(prev => ({
         ...prev,
-        encargado_id: data.encargado_id,
-        encargado_nombre: data.encargado_nombre
+        perfil_asignado: data.perfil_asignado
       }));
 
       if (refresh) refresh();
     } catch (err) {
-      setErrorEncargado(err.message || "Error reasignando la gestión");
+      setErrorPerfil(err.message || "Error reasignando la gestión");
     } finally {
-      setGuardandoEncargado(false);
+      setGuardandoPerfil(false);
     }
   };
 
@@ -866,36 +847,32 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
 
               <span className="d-inline-flex align-items-center gap-1 text-nowrap">
                 {editando && puedeAdministrarGestion && !gestionCerrada ? (
-                  <Dropdown align="end" onToggle={(abierto) => abierto && cargarEncargados()}>
+                  <Dropdown align="end">
                     <Dropdown.Toggle
                       size="sm"
                       variant="outline-primary"
-                      title="Reasignar encargado"
-                      aria-label="Reasignar encargado"
-                      disabled={guardandoEncargado}
+                      title="Reasignar perfil"
+                      aria-label="Reasignar perfil"
+                      disabled={guardandoPerfil}
                       className="sin-flecha py-0 px-1 d-inline-flex align-items-center"
                     >
-                      {guardandoEncargado ? (
+                      {guardandoPerfil ? (
                         <span className="spinner-border spinner-border-sm" />
                       ) : (
                         <i className="bi bi-person" style={{ fontSize: "1.3rem", lineHeight: 1.3 }} />
                       )}
                     </Dropdown.Toggle>
 
-                    <Dropdown.Menu style={{ maxHeight: 280, overflowY: "auto" }}>
-                      <Dropdown.Header>Reasignar a…</Dropdown.Header>
+                    <Dropdown.Menu>
+                      <Dropdown.Header>Reasignar al perfil…</Dropdown.Header>
 
-                      {!encargados.length && !errorEncargado && (
-                        <Dropdown.ItemText className="text-muted small">Cargando...</Dropdown.ItemText>
-                      )}
-
-                      {encargados.map(u => (
+                      {PERFILES_GESTION.map(perfil => (
                         <Dropdown.Item
-                          key={u.id}
-                          active={Number(u.id) === Number(gestion.encargado_id)}
-                          onClick={() => reasignarA(u)}
+                          key={perfil}
+                          active={perfil === gestion.perfil_asignado}
+                          onClick={() => reasignarA(perfil)}
                         >
-                          {u.full_name} <span className="small opacity-75">({u.role})</span>
+                          {perfil}
                         </Dropdown.Item>
                       ))}
                     </Dropdown.Menu>
@@ -904,12 +881,12 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                   <i
                     className="bi bi-person text-muted"
                     style={{ fontSize: "1.3rem", lineHeight: 1.3 }}
-                    title="Encargado de la gestión"
+                    title="Perfil asignado a la gestión"
                   />
                 )}
 
-                <span className="small text-muted" title="Encargado de la gestión">
-                  {gestion.encargado_nombre || "Sin asignar"}
+                <span className="small text-muted" title="Perfil asignado a la gestión">
+                  {gestion.perfil_asignado || "Sin asignar"}
                 </span>
               </span>
 
@@ -969,8 +946,8 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
               )}
             </div>
 
-            {errorEncargado && (
-              <div className="text-danger small mb-2">{errorEncargado}</div>
+            {errorPerfil && (
+              <div className="text-danger small mb-2">{errorPerfil}</div>
             )}
 
             {errorEdicion && (

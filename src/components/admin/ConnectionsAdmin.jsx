@@ -208,6 +208,28 @@ function ConnectionsAdmin({ token }) {
       cargar();
     };
 
+  // Acciones secundarias de cada local: menú "…" en escritorio y parte del menú de móvil
+  const accionesMas = (row) => [
+    {
+      label: "Incidencias",
+      icon: "bi bi-exclamation-triangle text-warning",
+      onClick: () => setConnectionIncidencias(row),
+    },
+    {
+      label: row.activo ? "Desactivar" : "Activar",
+      icon: row.activo ? "bi bi-toggle-on text-success" : "bi bi-toggle-off text-secondary",
+      onClick: () => toggleActivo(row.id, !row.activo),
+    },
+    ...(esAdmin
+      ? [
+          {
+            label: "Eliminar",
+            icon: "bi bi-trash text-danger",
+            onClick: () => eliminar(row.id),
+          },
+        ]
+      : []),
+  ];
 
     const dataFiltrada = data.filter(item => {
       const cumpleTexto =
@@ -738,24 +760,12 @@ function ConnectionsAdmin({ token }) {
                                 }}>
                                 🖥️
                             </button>
-                            <button title="Incidencias del local" className="btn btn-sm btn-outline-warning"
-                                onClick={() => setConnectionIncidencias(row)}>
-                                🚨
-                            </button>
-                            <button title={row.activo ? "Desactivar Local" : "Activar Local"}
-                            className={`btn btn-sm ${ row.activo
-                                ? "btn-success "
-                                : "btn-secondary "
-                            }`}
-                            onClick={() => toggleActivo(row.id, !row.activo)}>
-                                {row.activo ? "⏻" : "⏻"}
-                            </button>
-                            {esAdmin && (
-                              <button className="btn btn-sm btn-danger" title="Eliminar local"
-                                  onClick={() => eliminar(row.id)} >
-                                  🗑️
-                              </button>
-                            )}
+                            <MobileActions
+                                className=""
+                                icon="bi-three-dots"
+                                title="Más funciones"
+                                actions={accionesMas(row)}
+                            />
                         </div>
                         <MobileActions
                             actions={[
@@ -780,25 +790,7 @@ function ConnectionsAdmin({ token }) {
                                   setShowCaracteristicas(true);
                                 },
                                 },
-                                {
-                                label: "Incidencias",
-                                icon: "bi bi-exclamation-triangle",
-                                onClick: () => setConnectionIncidencias(row),
-                                },
-                                {
-                                label: row.activo ? "Desactivar" : "Activar",
-                                icon: row.activo ? "bi bi-toggle-on text-success" : "bi bi-toggle-off text-secondary",
-                                onClick: () => toggleActivo(row.id, !row.activo),
-                                },
-                                ...(esAdmin
-                                  ? [
-                                      {
-                                        label: "Eliminar",
-                                        icon: "bi bi-trash text-danger",
-                                        onClick: () => eliminar(row.id),
-                                      },
-                                    ]
-                                  : []),
+                                ...accionesMas(row),
                             ]}
                         />
                     </div>

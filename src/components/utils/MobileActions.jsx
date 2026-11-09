@@ -1,7 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 
-function MobileActions({ actions = [] }) {
+// Por defecto es el menú de acciones de móvil (⋮); con className="" e icon="bi-three-dots" sirve
+// también en escritorio como botón "más funciones".
+function MobileActions({
+  actions = [],
+  className = "d-md-none",
+  icon = "bi-three-dots-vertical",
+  title
+}) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: null, bottom: null, right: 0 });
   const ref = useRef();
@@ -55,12 +62,13 @@ function MobileActions({ actions = [] }) {
   }, [open]);
 
   return (
-    <div className="d-md-none position-relative" ref={ref}>
+    <div className={`${className} position-relative`} ref={ref}>
       <button
         className="btn btn-sm btn-outline-secondary"
+        title={title}
         onClick={toggleMenu}
       >
-        <i className="bi bi-three-dots-vertical"></i>
+        <i className={`bi ${icon}`}></i>
       </button>
 
       {open && createPortal(

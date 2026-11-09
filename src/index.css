@@ -225,29 +225,6 @@ h2 {
     display: none !important;
   }
 
-  .mobile-dropdown {
-    min-width: 180px;
-    background: white;
-    border-radius: 10px;
-    border: 1px solid #ddd;
-    z-index: 9999;
-    overflow: hidden;
-  }
-
-  .dropdown-item-action {
-    width: 100%;
-    border: none;
-    background: none;
-    padding: 10px 14px;
-    text-align: left;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-  }
-
-  .dropdown-item-action:hover {
-    background: #f5f5f5;
-  }
   .divhora {
     width: 50px !important;
     height: auto;
@@ -271,4 +248,29 @@ h2 {
 /* Botón desplegable que solo muestra un ícono, sin la flecha de Bootstrap */
 .sin-flecha::after {
   display: none !important;
+}
+
+/* Menu de acciones (MobileActions): en movil y como "mas funciones" en escritorio */
+.mobile-dropdown {
+  min-width: 180px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.dropdown-item-action {
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.dropdown-item-action:hover {
+  background: #f5f5f5;
 }

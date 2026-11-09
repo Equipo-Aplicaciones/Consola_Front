@@ -4,6 +4,7 @@ import { API_BASE_URL } from "../../config";
 import MobileActions from "../utils/MobileActions";
 import ConnectionDetalleModal from "./ConnectionDetalleModal";
 import CaracteristicasModal from "./CaracteristicasModal";
+import IncidenciasLocalModal from "../incidencias/IncidenciasLocalModal";
 import Select from "react-select";
 import * as XLSX from "xlsx";
 import { logout } from "../utils/logout";
@@ -38,6 +39,7 @@ function ConnectionsAdmin({ token }) {
   const [selectedId, setSelectedId] = useState(null);
   const [showCaracteristicas, setShowCaracteristicas] = useState(false);
   const [connectionCaracteristicas, setConnectionCaracteristicas] = useState(null);
+  const [connectionIncidencias, setConnectionIncidencias] = useState(null);
   const [empresas, setEmpresas] = useState([]);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [showSearchMobile, setShowSearchMobile] = useState(false);
@@ -736,6 +738,10 @@ function ConnectionsAdmin({ token }) {
                                 }}>
                                 🖥️
                             </button>
+                            <button title="Incidencias del local" className="btn btn-sm btn-outline-warning"
+                                onClick={() => setConnectionIncidencias(row)}>
+                                🚨
+                            </button>
                             <button title={row.activo ? "Desactivar Local" : "Activar Local"}
                             className={`btn btn-sm ${ row.activo
                                 ? "btn-success "
@@ -773,6 +779,11 @@ function ConnectionsAdmin({ token }) {
                                   setConnectionCaracteristicas(row);
                                   setShowCaracteristicas(true);
                                 },
+                                },
+                                {
+                                label: "Incidencias",
+                                icon: "bi bi-exclamation-triangle",
+                                onClick: () => setConnectionIncidencias(row),
                                 },
                                 {
                                 label: row.activo ? "Desactivar" : "Activar",
@@ -813,6 +824,13 @@ function ConnectionsAdmin({ token }) {
         onClose={() => setShowCaracteristicas(false)}
         refresh={cargar}
         connection={connectionCaracteristicas}
+        token={token}
+      />
+
+      <IncidenciasLocalModal
+        show={Boolean(connectionIncidencias)}
+        onClose={() => setConnectionIncidencias(null)}
+        connection={connectionIncidencias}
         token={token}
       />
 

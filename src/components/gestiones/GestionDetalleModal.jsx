@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Modal, Button, Form, Badge, Table, Collapse, Dropdown } from "react-bootstrap";
 import * as XLSX from "xlsx";
 import { API_BASE_URL } from "../../config";
@@ -37,6 +37,13 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
   const role = user.role;
   const puedeAdministrarGestion = role === "Admin" || role === "N2";
+
+  // Al guardar un local se recarga el detalle completo para ver también lo que cambiaron otros
+  // usuarios; estos refs evitan pisar lo que esta persona tiene a medio escribir.
+  const localesSucios = useRef(new Set()); // locales con cambios escritos y aún sin guardar
+  const editandoRef = useRef(false);
+
+  editandoRef.current = editando;
 
   const cargarEstados = useCallback(async () => {
     if (!token) return;
@@ -85,12 +92,44 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
         throw new Error(data.error || "Error cargando gestión");
       }
 
+      localesSucios.current.clear();
       setGestion(data);
     } catch (err) {
       console.error(err);
       setError(err.message || "Error cargando gestión");
     } finally {
       setLoading(false);
+    }
+  }, [gestionId, token]);
+
+  // Igual que cargarGestion pero sin spinner ni errores en pantalla, y respetando lo que la persona
+  // está editando: los locales con cambios sin guardar se dejan como están y, si está editando los
+  // datos de la gestión, solo se actualizan los locales.
+  const recargarLocales = useCallback(async () => {
+    if (!gestionId || !token) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/gestiones/${gestionId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      setGestion(actual => {
+        if (!actual) return actual;
+
+        const locales = (data.locales || []).map(nuevo =>
+          localesSucios.current.has(nuevo.connection_id)
+            ? actual.locales.find(l => l.connection_id === nuevo.connection_id) || nuevo
+            : nuevo
+        );
+
+        return { ...(editandoRef.current ? actual : data), locales };
+      });
+    } catch (err) {
+      console.error(err);
     }
   }, [gestionId, token]);
 
@@ -378,12 +417,17 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
         throw new Error(data.error || "Error actualizando local");
       }
 
+      localesSucios.current.delete(local.connection_id);
+
       actualizarLocalState(local.connection_id, {
         estado_id: Number(estadoId),
         estado_codigo: estado.codigo,
         estado_nombre: estado.nombre,
         comentario: comentario?.trim() || ""
       });
+
+      // Trae el estado actual de todos los locales (cambios de otros usuarios incluidos)
+      await recargarLocales();
 
       if (refresh) {
         await refresh();
@@ -420,6 +464,8 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
       estado.codigo === "NO_APLICADO" &&
       !local.comentario?.trim()
     ) {
+      // El estado quedó elegido pero sin guardar hasta que escriba el motivo
+      localesSucios.current.add(local.connection_id);
       setError(
         `Ingrese el motivo de "No aplicado" para el local ${local.codLocal}.`
       );
@@ -1368,14 +1414,16 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                                   ? "Indique motivo..."
                                   : "Comentario opcional"
                               }
-                              onChange={e =>
+                              onChange={e => {
+                                localesSucios.current.add(local.connection_id);
+
                                 actualizarLocalState(
                                   local.connection_id,
                                   {
                                     comentario: e.target.value
                                   }
-                                )
-                              }
+                                );
+                              }}
                               onBlur={() => {
                                 if (
                                   !gestionBloqueada &&

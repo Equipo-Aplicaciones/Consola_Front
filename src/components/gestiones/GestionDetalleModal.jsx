@@ -38,12 +38,23 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   const role = user.role;
   const puedeAdministrarGestion = role === "Admin" || role === "N2";
 
-  // Al guardar un local se recarga el detalle completo para ver también lo que cambiaron otros
-  // usuarios; estos refs evitan pisar lo que esta persona tiene a medio escribir.
+  // El detalle se vuelve a pedir al guardar un local y cada cierto tiempo, para ver lo que cambian
+  // otros usuarios; estos refs evitan pisar lo que esta persona está haciendo.
   const localesSucios = useRef(new Set()); // locales con cambios escritos y aún sin guardar
+  const ocupadoRef = useRef(false);
   const editandoRef = useRef(false);
+  const estadoGestionRef = useRef(null);
+  const refreshRef = useRef(refresh);
 
+  ocupadoRef.current =
+    guardandoLocal !== null ||
+    guardandoMasivo ||
+    accionando ||
+    guardandoEdicion ||
+    guardandoPerfil;
   editandoRef.current = editando;
+  estadoGestionRef.current = gestion?.estado_codigo ?? null;
+  refreshRef.current = refresh;
 
   const cargarEstados = useCallback(async () => {
     if (!token) return;
@@ -117,6 +128,8 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
 
       const data = await res.json();
 
+      const cambioEstado = data.estado_codigo !== estadoGestionRef.current;
+
       setGestion(actual => {
         if (!actual) return actual;
 
@@ -128,10 +141,35 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
 
         return { ...(editandoRef.current ? actual : data), locales };
       });
+
+      // Otro usuario cambió el estado de la gestión: se actualiza también el listado
+      if (cambioEstado && refreshRef.current) {
+        refreshRef.current();
+      }
     } catch (err) {
       console.error(err);
     }
   }, [gestionId, token]);
+
+  // Refresco automático mientras el detalle está abierto y la pestaña a la vista
+  useEffect(() => {
+    if (!show || !gestionId) return;
+
+    const refrescar = () => {
+      if (!document.hidden && !ocupadoRef.current) {
+        recargarLocales();
+      }
+    };
+
+    const intervalo = setInterval(refrescar, 15000);
+
+    document.addEventListener("visibilitychange", refrescar);
+
+    return () => {
+      clearInterval(intervalo);
+      document.removeEventListener("visibilitychange", refrescar);
+    };
+  }, [show, gestionId, recargarLocales]);
 
   useEffect(() => {
     if (!show) return;

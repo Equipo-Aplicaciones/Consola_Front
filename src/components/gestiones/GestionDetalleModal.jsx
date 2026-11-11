@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Modal, Button, Form, Badge, Table, Collapse, Dropdown } from "react-bootstrap";
 import * as XLSX from "xlsx";
 import { API_BASE_URL } from "../../config";
@@ -37,6 +37,24 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
   const user = JSON.parse(localStorage.getItem("authUser") || "{}");
   const role = user.role;
   const puedeAdministrarGestion = role === "Admin" || role === "N2";
+
+  // El detalle se vuelve a pedir al guardar un local y cada cierto tiempo, para ver lo que cambian
+  // otros usuarios; estos refs evitan pisar lo que esta persona está haciendo.
+  const localesSucios = useRef(new Set()); // locales con cambios escritos y aún sin guardar
+  const ocupadoRef = useRef(false);
+  const editandoRef = useRef(false);
+  const estadoGestionRef = useRef(null);
+  const refreshRef = useRef(refresh);
+
+  ocupadoRef.current =
+    guardandoLocal !== null ||
+    guardandoMasivo ||
+    accionando ||
+    guardandoEdicion ||
+    guardandoPerfil;
+  editandoRef.current = editando;
+  estadoGestionRef.current = gestion?.estado_codigo ?? null;
+  refreshRef.current = refresh;
 
   const cargarEstados = useCallback(async () => {
     if (!token) return;
@@ -85,6 +103,7 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
         throw new Error(data.error || "Error cargando gestión");
       }
 
+      localesSucios.current.clear();
       setGestion(data);
     } catch (err) {
       console.error(err);
@@ -93,6 +112,64 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
       setLoading(false);
     }
   }, [gestionId, token]);
+
+  // Igual que cargarGestion pero sin spinner ni errores en pantalla, y respetando lo que la persona
+  // está editando: los locales con cambios sin guardar se dejan como están y, si está editando los
+  // datos de la gestión, solo se actualizan los locales.
+  const recargarLocales = useCallback(async () => {
+    if (!gestionId || !token) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/gestiones/${gestionId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      const cambioEstado = data.estado_codigo !== estadoGestionRef.current;
+
+      setGestion(actual => {
+        if (!actual) return actual;
+
+        const locales = (data.locales || []).map(nuevo =>
+          localesSucios.current.has(nuevo.connection_id)
+            ? actual.locales.find(l => l.connection_id === nuevo.connection_id) || nuevo
+            : nuevo
+        );
+
+        return { ...(editandoRef.current ? actual : data), locales };
+      });
+
+      // Otro usuario cambió el estado de la gestión: se actualiza también el listado
+      if (cambioEstado && refreshRef.current) {
+        refreshRef.current();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, [gestionId, token]);
+
+  // Refresco automático mientras el detalle está abierto y la pestaña a la vista
+  useEffect(() => {
+    if (!show || !gestionId) return;
+
+    const refrescar = () => {
+      if (!document.hidden && !ocupadoRef.current) {
+        recargarLocales();
+      }
+    };
+
+    const intervalo = setInterval(refrescar, 15000);
+
+    document.addEventListener("visibilitychange", refrescar);
+
+    return () => {
+      clearInterval(intervalo);
+      document.removeEventListener("visibilitychange", refrescar);
+    };
+  }, [show, gestionId, recargarLocales]);
 
   useEffect(() => {
     if (!show) return;
@@ -378,12 +455,17 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
         throw new Error(data.error || "Error actualizando local");
       }
 
+      localesSucios.current.delete(local.connection_id);
+
       actualizarLocalState(local.connection_id, {
         estado_id: Number(estadoId),
         estado_codigo: estado.codigo,
         estado_nombre: estado.nombre,
         comentario: comentario?.trim() || ""
       });
+
+      // Trae el estado actual de todos los locales (cambios de otros usuarios incluidos)
+      await recargarLocales();
 
       if (refresh) {
         await refresh();
@@ -420,6 +502,8 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
       estado.codigo === "NO_APLICADO" &&
       !local.comentario?.trim()
     ) {
+      // El estado quedó elegido pero sin guardar hasta que escriba el motivo
+      localesSucios.current.add(local.connection_id);
       setError(
         `Ingrese el motivo de "No aplicado" para el local ${local.codLocal}.`
       );
@@ -1368,14 +1452,16 @@ export default function GestionDetalleModal({ show, onClose, gestionId, token, r
                                   ? "Indique motivo..."
                                   : "Comentario opcional"
                               }
-                              onChange={e =>
+                              onChange={e => {
+                                localesSucios.current.add(local.connection_id);
+
                                 actualizarLocalState(
                                   local.connection_id,
                                   {
                                     comentario: e.target.value
                                   }
-                                )
-                              }
+                                );
+                              }}
                               onBlur={() => {
                                 if (
                                   !gestionBloqueada &&

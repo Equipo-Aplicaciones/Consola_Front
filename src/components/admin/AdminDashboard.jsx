@@ -11,6 +11,7 @@ import DashboardAgotados from "../pages/DashboardAgotados";
 import ConnectionsAdmin from "./ConnectionsAdmin";
 import ScheduledTasks from "../scheduledTasks/ScheduledTasks";
 import GestionesPage from "../gestiones/GestionesPage";
+import AuditoriaBoletas from "../auditoria/AuditoriaBoletas";
 import SavedQueries from "../savedQueries/SavedQueries";
 
 import "./AdminDashboard.css";
@@ -42,7 +43,8 @@ function AdminDashboard({ token, role }) {
       tabs: [
         { key: "reports", label: "Reportes", icon: "bi bi-bar-chart", roles: ["Admin"] },
         { key: "logs", label: "Logs", icon: "bi bi-journal-text", roles: ["Admin"] },
-        { key: "actualizaciones", label: "Actualización POS", icon: "bi bi-arrow-repeat" }
+        { key: "actualizaciones", label: "Actualización POS", icon: "bi bi-arrow-repeat" },
+        { key: "auditoria-boletas", label: "Auditoría de boletas", icon: "bi bi-receipt", roles: ["Admin"] }
       ]
     },
     {
@@ -139,6 +141,9 @@ function AdminDashboard({ token, role }) {
 
       case "saved-queries":
         return <SavedQueries token={token} />;
+
+      case "auditoria-boletas":
+        return <AuditoriaBoletas token={token} />;
 
       default:
         return null;

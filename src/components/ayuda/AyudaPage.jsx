@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge, Button, Col, Form, Modal, Row, Spinner } from "react-bootstrap";
 import { API_BASE_URL } from "../../config";
+import VisorPdf from "../common/VisorPdf";
 import ContactosAyuda from "./ContactosAyuda";
 import { ROLES } from "./roles";
 
@@ -137,6 +138,7 @@ function DocumentosAyuda({ token, role }) {
 
       setVisor({
         nombre: documento.titulo,
+        archivo: documento.nombre_archivo,
         url: URL.createObjectURL(await res.blob())
       });
     } catch (err) {
@@ -378,33 +380,7 @@ function DocumentosAyuda({ token, role }) {
         </div>
       )}
 
-      <Modal show={Boolean(visor)} onHide={() => setVisor(null)} size="xl" centered scrollable>
-        <Modal.Header closeButton className="py-2">
-          <Modal.Title className="fs-6 text-truncate">{visor?.nombre}</Modal.Title>
-        </Modal.Header>
-
-        <Modal.Body className="p-0">
-          {visor && (
-            <iframe
-              title={visor.nombre}
-              src={visor.url}
-              style={{ width: "100%", height: "75vh", border: 0 }}
-            />
-          )}
-        </Modal.Body>
-
-        <Modal.Footer className="py-2">
-          {visor && (
-            <a className="btn btn-sm btn-outline-secondary" href={visor.url} target="_blank" rel="noreferrer">
-              <i className="bi bi-box-arrow-up-right me-1" />
-              Abrir en pestaña nueva
-            </a>
-          )}
-          <Button size="sm" variant="secondary" onClick={() => setVisor(null)}>
-            Cerrar
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      <VisorPdf visor={visor} onClose={() => setVisor(null)} />
 
       <Modal show={Boolean(formulario)} onHide={() => !guardando && setFormulario(null)} size="lg" centered>
         <Modal.Header closeButton>

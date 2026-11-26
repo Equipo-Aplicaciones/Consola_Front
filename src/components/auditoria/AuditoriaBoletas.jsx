@@ -26,10 +26,10 @@ const hoySantiago = (desplazarDias = 0) => {
   return new Date(Date.UTC(a, m - 1, d + desplazarDias)).toISOString().slice(0, 10);
 };
 
-// Los cinco controles: clave en el resumen por local, clave de la marca en la boleta y color
+// Los cuatro controles: clave en el resumen por local, clave de la marca en la boleta y color.
+// El pago en efectivo es válido en estas mesas: no es un control, solo se informa aparte.
 const CONTROLES = [
-  { clave: "boletas_efectivo", marca: "f_efectivo", etiqueta: "Pago en efectivo", color: "#dc2626" },
-  { clave: "boletas_combo_cero", marca: "f_combo_cero", etiqueta: "Combo en $0", color: "#f59e0b" },
+  { clave: "boletas_combo_cero", marca: "f_combo_cero", etiqueta: "Combo sin cobrar", color: "#f59e0b" },
   { clave: "boletas_sin_pago", marca: "f_sin_pago", etiqueta: "Sin pago", color: "#6b7280" },
   { clave: "boletas_pago_distinto", marca: "f_pago_distinto", etiqueta: "Pagos ≠ total", color: "#2563eb" },
   { clave: "boletas_productos_distinto", marca: "f_productos_distinto", etiqueta: "Productos ≠ total", color: "#7c3aed" }
@@ -42,7 +42,6 @@ const nombreLocal = (l) => `${l.codigo_local} - ${l.nombre_local || "Sin nombre"
 function detalleBoleta(b) {
   const partes = [];
 
-  if (b.f_efectivo) partes.push(`Efectivo ${dinero(b.importe_efectivo)}`);
   if (b.f_combo_cero) partes.push(`${b.combos_cero} combo(s) en $0 (ref. ${dinero(b.monto_referencial)})`);
   if (b.f_sin_pago) partes.push("Sin registros de pago");
   if (b.f_pago_distinto) partes.push(`Pagos ${dinero(b.total_formpago)} vs total ${dinero(b.total)}`);
@@ -167,9 +166,9 @@ export default function AuditoriaBoletas({ token }) {
       "Boletas revisadas": l.boletas_revisadas,
       "Boletas anuladas": l.boletas_anuladas,
       "Boletas con diferencias": l.boletas_con_diferencias,
-      "Pago en efectivo": l.boletas_efectivo,
-      "Importe efectivo": l.importe_efectivo,
-      "Combo en $0": l.boletas_combo_cero,
+      "Boletas con efectivo (informativo)": l.boletas_efectivo,
+      "Importe efectivo (informativo)": l.importe_efectivo,
+      "Combo sin cobrar": l.boletas_combo_cero,
       "Combos en $0 (unidades)": l.combos_cero,
       "Monto referencial": l.monto_referencial,
       "Sin pago": l.boletas_sin_pago,
@@ -219,7 +218,7 @@ export default function AuditoriaBoletas({ token }) {
           Exportar
         </Button>
         <div className="small text-muted ms-auto">
-          Mesas {datos?.mesas?.desde ?? 500} a {datos?.mesas?.hasta ?? 599} · máximo 7 días · las anuladas no se revisan
+          Mesas {datos?.mesas?.desde ?? 500} a {datos?.mesas?.hasta ?? 599} · máximo 7 días · las anuladas no se revisan · el efectivo solo se informa
         </div>
       </div>
 
@@ -254,16 +253,15 @@ export default function AuditoriaBoletas({ token }) {
             </div>
             <div className="col-6 col-md-3">
               <Indicador
-                titulo="Pago en efectivo (error)"
-                valor={totales.efectivo}
+                titulo="Boletas con efectivo (informativo)"
+                valor={totales.efectivo.toLocaleString("es-CL")}
                 detalle={totales.efectivo ? `${dinero(totales.importeEfectivo)} cobrados en efectivo` : "Sin pagos en efectivo"}
-                color={totales.efectivo ? "#dc2626" : "#16a34a"}
-                alerta={totales.efectivo > 0}
+                color="#0ea5e9"
               />
             </div>
             <div className="col-6 col-md-3">
               <Indicador
-                titulo="Combos en $0"
+                titulo="Combos sin cobrar"
                 valor={totales.combosCero}
                 detalle={`${dinero(totales.montoReferencial)} de monto referencial`}
                 color={totales.combosCero ? "#f59e0b" : "#16a34a"}
@@ -337,12 +335,13 @@ export default function AuditoriaBoletas({ token }) {
                     </th>
                   ))}
                   <th className="text-end">Monto ref. combos</th>
+                  <th className="text-end text-muted">Efectivo (info)</th>
                 </tr>
               </thead>
               <tbody>
                 {filas.length === 0 && (
                   <tr>
-                    <td colSpan={CONTROLES.length + 4} className="text-center text-muted py-3">
+                    <td colSpan={CONTROLES.length + 5} className="text-center text-muted py-3">
                       No hay locales para mostrar.
                     </td>
                   </tr>
@@ -378,11 +377,14 @@ export default function AuditoriaBoletas({ token }) {
                           </td>
                         ))}
                         <td className="text-end">{l.monto_referencial > 0 ? dinero(l.monto_referencial) : "-"}</td>
+                        <td className="text-end text-muted">
+                          {l.boletas_efectivo > 0 ? `${l.boletas_efectivo} (${dinero(l.importe_efectivo)})` : "-"}
+                        </td>
                       </tr>
 
                       {expandido && (
                         <tr>
-                          <td colSpan={CONTROLES.length + 4} className="bg-light">
+                          <td colSpan={CONTROLES.length + 5} className="bg-light">
                             <Table size="sm" className="mb-0 bg-white">
                               <thead>
                                 <tr>
